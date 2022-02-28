@@ -1,4 +1,6 @@
-pub mod snowflake;
+mod snowflake;
+
+pub use snowflake::*;
 
 pub trait UidGenerator {
   type Item;
