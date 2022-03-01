@@ -1,6 +1,8 @@
 mod snowflake;
+mod uuid;
 
-pub use snowflake::*;
+pub use super::id::snowflake::*;
+pub use super::id::uuid::*;
 
 pub trait UidGenerator {
   type Item;
