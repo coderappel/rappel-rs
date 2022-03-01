@@ -18,7 +18,7 @@ pub enum SnowflakeError {
 ///
 /// ```rust
 /// use rappel::id::UidGenerator;
-/// use rappel::id::snowflake::Snowflake;
+/// use rappel::id::Snowflake;
 ///
 /// let mut gen = Snowflake::new(123);
 /// let mut id = gen.next().expect("Expected ID");
@@ -27,10 +27,10 @@ pub enum SnowflakeError {
 /// The generator produces 64 bit id with the following scheme
 /// [0][timestamp millis (41 bits)][machine id (10 bits)][sequence (12 bits)]
 ///
-/// For timestamp, the generator produces refering to 2021/01/01 00:00:00 UTC not
+/// For timestamp, the generator produces referring to 2021/01/01 00:00:00 UTC not
 /// UNIX EPOCH.
 ///
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Snowflake {
   ts_epoch: i64,
   machine_id: i64,
