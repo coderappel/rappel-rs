@@ -1,2 +1,2 @@
-mod grpc;
-mod store;
+pub mod grpc;
+pub mod store;
