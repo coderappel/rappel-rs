@@ -9,12 +9,21 @@ pub enum Error {
   #[cfg(feature = "redis-store")]
   #[error("Read error")]
   RedisError(#[from] redis::RedisError),
+
   #[error("Deserialization failed")]
   ProstDecodeError(#[from] prost::DecodeError),
+
   #[error("Serialization failed")]
   ProstEncodeError(#[from] prost::EncodeError),
+
+  #[error("Internal Error")]
+  Internal(#[from] anyhow::Error),
+  
   #[error("Not Found")]
   NotFound,
+
+  #[error("Unknown Error")]
+  Unknown,
 }
 
 #[async_trait::async_trait]

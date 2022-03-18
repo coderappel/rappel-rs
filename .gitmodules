@@ -1,3 +1,3 @@
 [submodule "proto"]
 	path = proto
-	url = ssh://git@github.com/devbox-io/proto
+	url = https://github.com/devbox-io/proto
