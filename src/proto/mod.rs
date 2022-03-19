@@ -4,6 +4,17 @@ pub mod google {
   }
 }
 
+pub mod app {
+  pub mod resource {
+    tonic::include_proto!("app.resource");
+  }
+  
+  pub mod workspace {
+    tonic::include_proto!("app.workspace");
+  }
+}
+
+
 pub mod longrunning {
   tonic::include_proto!("longrunning");
 }
