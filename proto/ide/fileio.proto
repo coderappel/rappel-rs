@@ -1,0 +1,124 @@
+syntax = "proto3";
+
+package ide.fileio;
+
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+
+service FileIO {
+  rpc List(FileListRequest) returns (FileListResponse);
+
+  rpc Read(FileReadRequest) returns (FileReadResponse);
+
+  rpc ReadMetadata(FileMetadataRequest) returns (FileMetadataResponse);
+
+  rpc Create(CreateRequest) returns (CreateResponse);
+  
+  rpc Write(WriteRequest) returns (WriteResponse);
+
+  rpc Move(MoveRequest) returns (MoveResponse);
+
+  rpc Copy(CopyRequest) returns (CopyResponse);
+
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+}
+
+message FileNode {
+  string path = 1;
+  string name = 2;
+  bool isLeaf = 5;
+  repeated FileNode children = 10;
+}
+
+enum FileType {
+  REG = 0;
+  DIR = 1;
+  LINK = 2;
+}
+
+message FileMetadata {
+  string path = 2;
+  FileType file_type = 3;
+
+  int64 size_in_bytes = 9;  
+  map<string, string> attributes = 10;
+
+  google.protobuf.Timestamp creation_ts =  18;
+  google.protobuf.Timestamp last_modification_ts = 19;
+}
+
+message FileListRequest {
+  string path = 2;
+  int32 depth = 3;
+  string page_token = 5;
+}
+
+message FileListResponse {
+  string path = 1;
+  repeated FileNode nodes = 2;
+  string next_page_token = 5;
+}
+
+message FileReadRequest {
+  string path = 2;
+  string page_token = 5;
+}
+
+message FileReadResponse {
+  string path = 1;
+  string content = 2;
+  string next_page_token = 5;
+}
+
+message FileMetadataRequest {
+  string path = 2;
+  google.protobuf.FieldMask field_mask = 5;
+}
+
+message FileMetadataResponse {
+  FileMetadata metadata = 1;
+}
+
+message MoveRequest {
+  string source = 1;
+  string target = 2;
+}
+
+message MoveResponse {
+}
+
+message CopyRequest {
+  string source = 1;
+  string target = 2;
+}
+
+message CopyResponse {
+}
+
+message DeleteRequest {
+  string path = 1;
+}
+
+message DeleteResponse {
+}
+
+message CreateRequest {
+  string path = 1;
+  FileType file_type = 2;
+  string source = 3;
+}
+
+message CreateResponse {
+  string path = 1;
+}
+
+message WriteRequest {
+  string path = 1;
+  uint64 offset = 2;
+  bytes data = 3;
+}
+
+message WriteResponse {
+  uint64 bytes_written = 1;
+}

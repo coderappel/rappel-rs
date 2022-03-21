@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+package ide.collaborate;
+
+import "ide/common.proto";
+
+service DeltaChannelService {
+  rpc Open(OpenDeltaChannelRequest) returns (stream AppliedDelta);
+
+  rpc Close(CloseDeltaChannelRequest) returns (CloseDeltaChannelResponse);
+}
+
+service DeltaSubmissionService {
+  rpc Submit(SubmitDeltaRequest) returns (SubmitDeltaResponse);
+}
+
+message Delta {
+  string author = 2;
+
+  string version = 3;
+
+  repeated DeltaOperation operation = 4;
+}
+
+enum OperationType {
+  OperationType_Unknown = 0;
+  AddParticipant = 1;
+  RemoveParticipant = 2;
+  MutateDocument = 3;
+}
+
+enum MutationType {
+  MutationType_Unknown = 0;
+  InsertCharacters = 1;
+  DeleteCharacters = 2;
+  ReplaceCharacters = 3;
+}
+
+message DocumentMutation {
+  MutationType type = 1;
+
+  int32 offset = 3;
+
+  int32 length = 4;
+
+  string text = 5;
+}
+
+message DeltaOperation {
+  OperationType type = 1;
+
+  string subject = 2;
+
+  DocumentMutation mutation = 3;
+}
+
+message OpenDeltaChannelRequest {
+  ide.common.RequestMetadata metadata = 1;
+
+  /*
+   * The version of the first run of delta service.
+   */
+  string begin_version = 2;
+}
+
+message AppliedDelta {
+  Delta delta = 1;
+
+  int64 timestamp = 2;
+}
+
+message CloseDeltaChannelRequest {
+  ide.common.RequestMetadata metadata = 1;
+}
+
+message CloseDeltaChannelResponse {
+
+}
+
+message SubmitDeltaRequest {
+  ide.common.RequestMetadata metadata = 1;
+
+  Delta delta = 2;
+}
+
+message SubmitDeltaResponse {
+  enum StatusCode {
+    // Success
+    OK = 0;
+
+    // Request was ill formed
+    BAD_REQUEST = 1;
+
+    // An unspecified internal error occured
+    INTERNAL_ERROR = 2;
+
+    // The user is not authorized to submit delta
+    NOT_AUTHORIZED = 3;
+
+    // The submitted version doesn't match any point in history
+    VERSION_ERROR = 4;
+
+    // The operation submitted is invalid
+    INVALID_OPERATION = 5;
+
+    // The request was made against a very old version
+    TOO_OLD = 10;
+  }
+
+  StatusCode status_code = 1;
+
+  string message = 2;
+
+  string version_after_application = 3;
+
+  int64 timestamp = 4;
+}

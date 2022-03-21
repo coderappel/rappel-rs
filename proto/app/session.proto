@@ -1,0 +1,153 @@
+syntax = "proto3";
+
+package app.session;
+
+import "google/api/annotations.proto";
+import "app/workspace.proto";
+
+service SessionService {
+  rpc Create(CreateRequest) returns (CreateResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/workspaces/{workspace_id}/sessions",
+      body: "*"
+    };
+  }
+
+  rpc Delete(DeleteRequest) returns (DeleteResponse) {
+    option (google.api.http) = {
+      delete: "/api/v1/workspaces/{workspace_id}/sessions/{session_id}",
+      body: "*"
+    };
+  }
+
+  rpc Update(UpdateRequest) returns (UpdateResponse) {
+    option (google.api.http) = {
+      put: "/api/v1/workspaces/{workspace_id}/sessions/{session_id}",
+      body: "*"
+    };
+  }
+
+  rpc Get(GetRequest) returns (GetResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/workspaces/{workspace_id}/sessions/{session_id}",
+    };
+  }
+  
+  rpc List(ListRequest) returns (ListResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/workspaces/{workspace_id}/sessions",
+    };
+  }
+}
+
+enum Status {
+  STATUS_NEW = 0;
+  STATUS_SCHEDULED = 1;
+  STATUS_RUNNING = 2;
+  STATUS_TERMINATING = 3;
+  STATUS_TERMINATED = 4;
+}
+
+message WorkspaceSession {
+  /*
+   * ID for which this session
+   */
+   int64 session_id = 1;
+
+  /*
+   * Workspace ID for the session.
+   */
+   int64 workspace_id = 2;
+
+  /*
+   * The current status for the workspace.
+   */
+  Status status = 3;
+
+  /*
+   * Exit Code for the workspace.
+   */
+  int32 exit_code = 4;
+
+  /*
+   * Exit message for the workspace.
+   */
+  string exit_message = 5;
+
+  /*
+   * Id of the cluster where the workspace session start is requested.
+   */
+  string cluster_id = 10;
+
+  /*
+   * The address on which the workspace is listening. This address
+   * is used by services to communicate with Workspace GRPC.
+   */
+  string target_address = 11;
+
+  /*
+   * The EPOCH timestamp in millis when the workspace was created.
+   */
+   uint64 creation_ts = 20;
+
+   /*
+    * The user id for the user who initially created the workspace.
+    */
+    int64 creation_uid = 21;
+ 
+   /*
+    * The EPOCH timestamp in millis when the workspace was last updated.
+    */
+   uint64 last_update_ts = 22;
+ 
+   /*
+    * The user id for the user who last updated the record the workspace 
+    */
+    int64 last_update_uid = 23;
+}
+
+message CreateRequest {
+  int64 workspace_id = 1;
+}
+
+message CreateResponse {
+  WorkspaceSession workspace_session = 1;
+}
+
+message UpdateRequest {
+  WorkspaceSession workspace_session = 1;
+}
+
+message UpdateResponse {
+  WorkspaceSession workspace_session = 1;
+}
+
+message DeleteRequest {
+  int64 workspace_id = 1;
+
+  int64 session_id = 2;
+}
+
+message DeleteResponse {
+  WorkspaceSession workspace_session = 1;
+}
+
+message GetRequest {
+  int64 workspace_id = 1;
+
+  int64 session_id = 2;
+}
+
+message GetResponse {
+  WorkspaceSession workspace_session = 1;
+}
+
+message ListRequest {
+  repeated int64 workspace_id = 1;
+
+  repeated Status status = 2;
+}
+
+message ListResponse {
+  repeated WorkspaceSession workspace_session = 1;
+}

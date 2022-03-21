@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package ide.process;
+
+service ProcessService {
+  rpc Start(StartRequest) returns (StartResponse);
+
+  rpc List(ListRequest) returns (ListResponse);
+
+  rpc Get(GetRequest) returns (GetResponse);
+
+  rpc Listen(ListenRequest) returns (stream ListenResponse);
+
+  rpc Update(UpdateRequest) returns (UpdateResponse);
+
+  rpc Send(SendRequest) returns (SendResponse);
+
+  rpc Stop(StopRequest) returns (StopResponse);
+}
+
+enum Status {
+  Status_Unknown = 0;
+  Starting = 1;
+  Ok = 2;
+  Terminating = 3;
+}
+
+message PtyOptions {
+  string name = 1;
+  uint32 cols = 2;
+  uint32 rows = 3;
+  string encoding = 6;
+}
+
+message Process {
+  uint32 pid = 1;
+  string cwd = 2;
+  string cmd = 3;
+  repeated string args = 4;
+  map<string, string> env = 5;
+  
+  PtyOptions pty_options = 10;
+
+  Status status = 20;
+}
+
+message StartRequest {
+  Process process = 1;
+}
+
+message StartResponse {
+  Process process = 1;
+}
+
+message GetRequest {
+  uint32 pid = 1;
+}
+
+message GetResponse {
+  Process process = 1;
+}
+
+message ListRequest {
+}
+
+message ListResponse {
+  repeated Process process = 1;
+}
+
+message StopRequest {
+  uint32 pid = 1;
+}
+
+message StopResponse {
+  Process process = 1;
+}
+
+message ListenRequest {
+  uint32 pid = 1;
+}
+
+message ListenResponse {
+  bytes payload = 1;
+}
+
+message UpdateRequest {
+  uint32 pid = 1;
+  PtyOptions opts = 2;
+}
+
+message UpdateResponse {
+}
+
+message SendRequest {
+  uint32 pid = 1;
+  bytes payload = 2;
+}
+
+message SendResponse {
+}

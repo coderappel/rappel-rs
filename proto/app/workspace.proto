@@ -1,0 +1,150 @@
+syntax = "proto3";
+
+package app.workspace;
+
+import "google/protobuf/field_mask.proto";
+import "google/api/annotations.proto";
+
+import "app/resource.proto";
+
+service WorkspaceService {
+  rpc Create(CreateRequest) returns (CreateResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/workspaces",
+      body: "*"
+    };
+  }
+  
+  rpc Delete(DeleteRequest) returns (DeleteResponse) {
+    option (google.api.http) = {
+      delete: "/api/v1/workspaces/{workspace_id}"
+    };
+  }
+
+  rpc Get(GetRequest) returns (GetResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/workspaces/{workspace_id}"
+    };
+  }
+
+  rpc List(ListRequest) returns (ListResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/workspaces"
+    };
+  }
+
+  rpc Update(UpdateRequest) returns (UpdateResponse) {
+    option (google.api.http) = {
+      put: "/api/v1/workspaces/{workspace_id}",
+      body: "*"
+    };
+  }
+}
+
+message Workspace {
+  /*
+   * The unique id for the Workspace. 
+   *
+   * Output only 
+   */
+   int64 workspace_id = 1;
+
+  /*
+   * The display name for the workspace. The field contains the user provided
+   * name for the workspace. 
+  **/
+  string display_name = 2;
+
+  /*
+   * The CPU and Memory bundle to use to provision for this workspace.
+   */
+   int64 resource_bundle_id = 3;
+
+  /*
+   * The type of disk to be used for boot disk
+   */
+   int64 disk_type_id = 4;
+
+  /*
+   * The size of disk to be used for boot disk in Gigabytes
+   */
+  uint32 disk_size_in_gb = 5;
+
+  /*
+   * The image to be used as boot disk
+   */
+   int64 disk_image_id = 6;
+
+  /*
+   * Contains the User ID for the user who currently owns this workspace. At
+   * creation, the owner is the same as the creating user. The Workspace ownership
+   * can be transferred to another user.
+   */
+   int64 owner_uid = 10;
+
+  /*
+   * The EPOCH timestamp in millis when the workspace was created.
+   */
+  uint64 creation_ts = 20;
+
+  /*
+   * The user id for the user who initially created the workspace.
+   */
+   int64 creation_uid = 21;
+
+  /*
+   * The EPOCH timestamp in millis when the workspace was last updated.
+   */
+  uint64 last_update_ts = 22;
+
+  /*
+   * The user id for the user who last updated the record the workspace 
+   */
+   int64 last_update_uid = 23;
+}
+
+message CreateRequest {
+  Workspace workspace = 1;
+}
+
+message CreateResponse {
+  Workspace workspace = 1;
+}
+
+message DeleteRequest {
+  int64 workspace_id = 1;
+}
+
+message DeleteResponse {
+  Workspace workspace = 1;
+}
+
+message GetRequest {
+  int64 workspace_id = 1;
+}
+
+message GetResponse {
+  Workspace workspace = 1;
+}
+
+message ListRequest {
+  string page_token = 10;
+}
+
+message ListResponse {
+  repeated Workspace workspace = 1;
+
+  uint64 total_count = 2;
+  
+  string next_page_token = 10;
+}
+
+message UpdateRequest {
+  Workspace workspace = 1;
+
+  google.protobuf.FieldMask field_mask = 5;
+}
+
+message UpdateResponse {
+  Workspace workspace = 1;
+}

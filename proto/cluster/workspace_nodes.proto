@@ -1,0 +1,119 @@
+syntax = "proto3";
+
+package cluster;
+
+import "google/protobuf/timestamp.proto";
+import "longrunning/operations.proto";
+import "app/workspace.proto";
+import "app/resource.proto";
+
+message Port {
+  string name = 1;
+
+  string protocol = 2;
+
+  int32 port = 3;
+
+  int32 target_port = 4;
+
+  int32 external_port = 5;
+}
+
+enum NodePhase {
+  NODE_PHASE_UNKNOWN = 0;
+  NODE_PHASE_PENDING = 1;
+  NODE_PHASE_RUNNING = 2;
+  NODE_PHASE_TERMINATING = 3;
+  NODE_PHASE_TERMINATED = 4;
+}
+
+message NodeStatus {
+  NodePhase phase = 1;
+
+  string phase_message = 2;
+
+  string phase_reason = 3;
+
+  bool ready = 4;
+
+  int32 exit_code = 5;
+
+  string exit_message = 6;
+
+  string exit_reason = 7;
+
+  google.protobuf.Timestamp started_at = 10;
+
+  google.protobuf.Timestamp last_probe_time = 11;
+}
+
+message WorkspaceNode {
+  string node_id = 1;
+
+  string cluster_id = 2;
+
+  string namespace = 3;
+
+  string userspace = 4;
+
+  int64 workspace_id = 5;
+
+  string service_account_name = 6;
+
+  map<string, string> labels = 7;
+
+  map<string, string> annotations = 8;
+
+  map<string, string> metadata = 9;
+
+  repeated string external_address = 10;
+
+  repeated string internal_address = 11;
+
+  repeated Port port = 12;
+
+  NodeStatus status = 15;
+}
+
+service WorkspaceNodes {
+  rpc Create(CreateWorkspaceNodeRequest) returns (longrunning.Operation);
+
+  rpc Get(GetWorkspaceNodeRequest) returns (WorkspaceNode);
+
+  rpc List(ListWorkspaceNodeRequest) returns (ListWorkspaceNodeResponse);
+
+  rpc Delete(DeleteWorkspaceNodeRequest) returns (longrunning.Operation);
+}
+
+message CreateWorkspaceNodeRequest {
+  app.workspace.Workspace workspace = 1;
+  
+
+  app.resource.ResourceBundle resource_bundle = 5;
+
+  app.resource.DiskType disk_type = 6;
+
+  app.resource.DiskImage disk_image = 7;
+
+  map<string, string> labels = 10;
+}
+
+message GetWorkspaceNodeRequest {
+  string node_id = 1;
+}
+
+message DeleteWorkspaceNodeRequest {
+  string node_id = 1;
+}
+
+message ListWorkspaceNodeRequest {
+  repeated int64 workspace_id = 1;
+
+  string page_token = 5;
+}
+
+message ListWorkspaceNodeResponse {
+  repeated WorkspaceNode workspace_node = 1;
+
+  string next_page_token = 5;
+}

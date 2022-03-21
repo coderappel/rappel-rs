@@ -1,0 +1,177 @@
+syntax = "proto3";
+
+import "google/api/annotations.proto";
+
+package app.resource;
+
+message ResourceBundle {
+  int64 resource_bundle_id = 1;
+  
+  string display_name = 2;
+
+  string cpu_family = 3;
+  
+  uint32 cpu_count = 4;
+
+  uint32 mem_in_mb = 5;
+
+  string gcp = 10;
+
+  string aws = 11;
+  /*
+   * The EPOCH timestamp in millis when the ResourceBundle was created.
+   */
+   uint64 creation_ts = 20;
+
+   /*
+    * The user id for the user who initially created the ResourceBundle.
+    */
+    int64 creation_uid = 21;
+ 
+   /*
+    * The EPOCH timestamp in millis when the ResourceBundle was last updated.
+    */
+   uint64 last_update_ts = 22;
+ 
+   /*
+    * The user id for the user who last updated the record the ResourceBundle 
+    */
+    int64 last_update_uid = 23;
+}
+
+message DiskType {
+  int64 disk_type_id = 1;
+
+  string display_name = 2;
+
+  string gcp = 10;
+
+  string aws = 11;
+  /*
+   * The EPOCH timestamp in millis when the DiskType was created.
+   */
+   uint64 creation_ts = 20;
+
+   /*
+    * The user id for the user who initially created the DiskType.
+    */
+   int64 creation_uid = 21;
+ 
+   /*
+    * The EPOCH timestamp in millis when the DiskType was last updated.
+    */
+   uint64 last_update_ts = 22;
+ 
+   /*
+    * The user id for the user who last updated the record the DiskType 
+    */
+    int64 last_update_uid = 23;
+}
+
+message DiskImage {
+  int64 disk_image_id = 1;
+
+  string display_name = 2;
+
+  string gcp = 10;
+
+  string aws = 11;
+  /*
+   * The EPOCH timestamp in millis when the DiskImage was created.
+   */
+   uint64 creation_ts = 20;
+
+   /*
+    * The user id for the user who initially created the DiskImage.
+    */
+    int64 creation_uid = 21;
+ 
+   /*
+    * The EPOCH timestamp in millis when the DiskImage was last updated.
+    */
+   uint64 last_update_ts = 22;
+ 
+   /*
+    * The user id for the user who last updated the record the DiskImage 
+    */
+    int64 last_update_uid = 23;
+}
+
+service ResourceService {
+  rpc ListResourceBundle(ListResourceBundleRequest) returns (ListResourceBundleResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/resource_bundles"
+    };
+  };
+
+  rpc GetResourceBundle(GetResourceBundleRequest) returns (GetResourceBundleResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/resource_bundles/{resource_bundle_id}"
+    };
+  };
+
+  rpc ListDiskType(ListDiskTypeRequest) returns (ListDiskTypeResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/disk_types"
+    };
+  };
+
+  rpc GetDiskType(GetDiskTypeRequest) returns (GetDiskTypeResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/disk_types/{disk_type_id}"
+    };
+  };
+
+  rpc ListDiskImage(ListDiskImageRequest) returns (ListDiskImageResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/disk_images"
+    };
+  };
+
+  rpc GetDiskImage(GetDiskImageRequest) returns (GetDiskImageResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/disk_images/{disk_image_id}"
+    };
+  };
+}
+
+
+message ListResourceBundleRequest {}
+
+message ListResourceBundleResponse {
+  repeated ResourceBundle resource_bundle = 1;
+}
+
+message GetResourceBundleRequest {
+  int64 resource_bundle_id = 1;
+}
+
+message GetResourceBundleResponse {
+  ResourceBundle resource_bundle = 1;
+}
+
+message ListDiskTypeRequest {}
+
+message ListDiskTypeResponse {
+  repeated DiskType disk_type = 1;
+}
+message GetDiskTypeRequest {
+  int64 disk_type_id = 1;
+}
+
+message GetDiskTypeResponse {
+  DiskType disk_type = 1;
+}
+
+message ListDiskImageRequest {}
+
+message ListDiskImageResponse {
+  repeated DiskImage disk_image = 1;
+}
+message GetDiskImageRequest {
+  int64 disk_image_id = 1;
+}
+
+message GetDiskImageResponse {
+  DiskImage disk_image = 1;
+}
