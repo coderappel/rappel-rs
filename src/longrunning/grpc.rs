@@ -27,11 +27,13 @@ impl<S: 'static> operations_server::Operations for Service<S>
   where
     S: OperationsStore + Send + Sync
 {
+  #[tracing::instrument(skip(self))]
   async fn get(&self, request: tonic::Request<GetOperationRequest>) -> TonicResult<Operation> {
+    let ctx = crate::grpc::extract_context(&request)?;
     let operation_id = request.into_inner().operation_id;
     let store = self.store.clone();
     let store = store.lock().await;
-    let result = store.get(&operation_id).await;
+    let result = store.get(&operation_id, &ctx).await;
 
     result
       .map(|operation| tonic::Response::new(operation))
@@ -44,6 +46,7 @@ impl<S: 'static> operations_server::Operations for Service<S>
       })
   }
 
+  #[tracing::instrument(skip(self))]
   async fn cancel(&self, _request: tonic::Request<CancelOperationRequest>) -> TonicResult<()> {
     Err(tonic::Status::unimplemented("unimplemented"))
   }

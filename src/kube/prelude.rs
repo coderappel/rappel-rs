@@ -28,7 +28,7 @@ impl PodExt for Pod {
     annotations.extend(self.annotations().clone());
 
     let mut node = WorkspaceNode::default();
-    node.node_id = self.uid().unwrap();
+    node.node_id = self.name();
 
     node.cluster_id = labels.remove("rappel_cluster_id").unwrap();
     node.userspace = labels.remove("rappel_userspace").unwrap();
