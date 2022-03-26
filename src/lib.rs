@@ -19,3 +19,5 @@ pub mod kube;
 
 #[cfg(feature = "redis")]
 pub mod redis;
+
+pub mod service;

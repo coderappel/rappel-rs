@@ -1,8 +1,15 @@
 use std::num::ParseIntError;
+use std::fmt::Display;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RequestContext {
   pub user_id: i64,
+}
+
+impl Display for RequestContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 pub fn extract_context<T>(request: &tonic::Request<T>) -> Result<RequestContext, tonic::Status> {

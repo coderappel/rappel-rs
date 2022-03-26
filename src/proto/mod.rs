@@ -12,6 +12,10 @@ pub mod app {
   pub mod workspace {
     tonic::include_proto!("app.workspace");
   }
+
+  pub mod session {
+    tonic::include_proto!("app.session");
+  }
 }
 
 

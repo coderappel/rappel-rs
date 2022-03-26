@@ -8,6 +8,7 @@ fn main() {
         "proto/cluster/workspace_nodes.proto",
         "proto/app/workspace.proto",
         "proto/app/resource.proto",
+        "proto/app/session.proto",
       ],
       &["proto"],
     )
