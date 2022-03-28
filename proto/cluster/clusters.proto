@@ -2,9 +2,7 @@ syntax = "proto3";
 
 package cluster;
 
-import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
-import "longrunning/operations.proto";
 
 enum ClusterPhase {
   CLUSTER_PHASE_UNKNOWN = 0;

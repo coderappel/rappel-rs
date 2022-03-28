@@ -13,6 +13,8 @@ impl <T: Clone> ShardedClient<T> {
     let name = config.name;
     let mut clients = Vec::default();
 
+    tracing::trace!(message = "Initializing ShardedClient", %name);
+
     for instance in config.instances {
       let address = instance.address.clone();
       let channel = tonic::transport::Channel::from_shared(address)?.connect().await?;
@@ -20,6 +22,8 @@ impl <T: Clone> ShardedClient<T> {
     }
 
     let client = Self { name, clients };
+
+    tracing::debug!(message = "Initialized ShardedClient", name = %client.name, count = client.clients.len());
 
     Ok(client)
   }

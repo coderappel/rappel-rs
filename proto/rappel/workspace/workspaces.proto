@@ -1,0 +1,141 @@
+syntax = "proto3";
+
+package rappel.workspace;
+
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "longrunning/operations.proto";
+import "rappel/workspace/templates.proto";
+import "rappel/process/status.proto";
+import "google/api/annotations.proto";
+
+service Workspaces {
+  rpc Create(CreateWorkspaceRequest) returns (longrunning.Operation) {
+    option (google.api.http) = {
+      post: "/api/v1/workspaces",
+      body: "*"
+    };
+  }
+  
+  rpc Delete(DeleteWorkspaceRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/api/v1/workspaces/{workspace_id}"
+    };
+  }
+
+  rpc Get(GetWorkspaceRequest) returns (Workspace) {
+    option (google.api.http) = {
+      get: "/api/v1/workspaces/{workspace_id}"
+    };
+  }
+
+  rpc List(ListWorkspaceRequest) returns (ListWorkspaceResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/workspaces"
+    };
+  }
+
+  rpc Update(UpdateWorkspaceRequest) returns (Workspace) {
+    option (google.api.http) = {
+      put: "/api/v1/workspaces/{workspace_id}",
+      body: "*"
+    };
+  }
+
+  rpc Start(StartWorkspaceRequest) returns (longrunning.Operation) {
+    option (google.api.http) = {
+      post: "/api/v1/workspaces/{workspace_id}/method:start",
+      body: "*"
+    };
+  }
+
+  rpc Stop(StopWorkspaceRequest) returns (longrunning.Operation) {
+    option (google.api.http) = {
+      post: "/api/v1/workspaces/{workspace_id}/method:stop",
+      body: "*"
+    };
+  }
+}
+
+enum WorkspaceStatus {
+  WORKSPACE_STATUS_UNKNOWN = 0;
+  WORKSPACE_STATUS_PENDING = 1;
+  WORKSPACE_STATUS_STARTING = 2;
+  WORKSPACE_STATUS_RUNNING = 3;
+  WORKSPACE_STATUS_TERMINATING = 4;
+  WORKSPACE_STATUS_TERMINATED = 5;
+}
+
+message Workspace {
+  int64 workspace_id = 1;
+
+  string owner = 2;
+
+  rappel.workspace.Template template = 3;
+
+  string display_name = 5;
+
+  WorkspaceStatus status = 7;
+
+  map<string,string> labels = 15;
+
+  rappel.process.ExitStatus last_status = 16;
+
+  google.protobuf.Timestamp creation_ts = 20;
+
+  int64 creation_user_id = 21;
+
+  google.protobuf.Timestamp last_update_ts = 22;
+
+  int64 last_update_user_id = 23;
+}
+
+message CreateWorkspaceRequest {
+  rappel.workspace.Template template = 1;
+
+  int64 template_instance_id = 2;
+}
+
+message ListWorkspaceRequest {
+  repeated int64 user_id = 1;
+
+  repeated int64 template_id = 2;
+
+  int32 page_count = 3;
+
+  string page_token = 4;
+
+  google.protobuf.FieldMask mask = 5;
+}
+
+message ListWorkspaceResponse {
+  repeated Workspace workspace = 1;
+
+  int32 total_count = 2;
+
+  int32 offset = 3;
+
+  string next_page_token = 5;
+}
+
+message GetWorkspaceRequest {
+  int64 workspace_id = 1;
+}
+
+message DeleteWorkspaceRequest {
+  int64 workspace_id = 1;
+}
+
+message UpdateWorkspaceRequest {
+  Workspace workspace = 1;
+}
+
+message StartWorkspaceRequest {
+  int64 workspace_id = 1;
+}
+
+message StopWorkspaceRequest {
+  int64 workspace_id = 1;
+}

@@ -3,31 +3,32 @@ syntax = "proto3";
 package app.session;
 
 import "google/api/annotations.proto";
+import "longrunning/operations.proto";
 import "app/workspace.proto";
 
-service SessionService {
-  rpc Create(CreateRequest) returns (CreateResponse) {
+service WorkspaceSessions {
+  rpc Create(CreateRequest) returns (longrunning.Operation) {
     option (google.api.http) = {
       post: "/api/v1/workspaces/{workspace_id}/sessions",
       body: "*"
     };
   }
 
-  rpc Delete(DeleteRequest) returns (DeleteResponse) {
+  rpc Delete(DeleteRequest) returns (longrunning.Operation) {
     option (google.api.http) = {
       delete: "/api/v1/workspaces/{workspace_id}/sessions/{session_id}",
       body: "*"
     };
   }
 
-  rpc Update(UpdateRequest) returns (UpdateResponse) {
+  rpc Update(UpdateRequest) returns (longrunning.Operation) {
     option (google.api.http) = {
       put: "/api/v1/workspaces/{workspace_id}/sessions/{session_id}",
       body: "*"
     };
   }
 
-  rpc Get(GetRequest) returns (GetResponse) {
+  rpc Get(GetRequest) returns (WorkspaceSession) {
     option (google.api.http) = {
       get: "/api/v1/workspaces/{workspace_id}/sessions/{session_id}",
     };
@@ -40,12 +41,12 @@ service SessionService {
   }
 }
 
-enum Status {
-  STATUS_NEW = 0;
-  STATUS_SCHEDULED = 1;
-  STATUS_RUNNING = 2;
-  STATUS_TERMINATING = 3;
-  STATUS_TERMINATED = 4;
+enum WorkspaceSessionStatus {
+  WORKSPACE_SESSION_STATUS_NEW = 0;
+  WORKSPACE_SESSION_STATUS_SCHEDULED = 1;
+  WORKSPACE_SESSION_STATUS_RUNNING = 2;
+  WORKSPACE_SESSION_STATUS_TERMINATING = 3;
+  WORKSPACE_SESSION_STATUS_TERMINATED = 4;
 }
 
 message WorkspaceSession {
@@ -62,7 +63,7 @@ message WorkspaceSession {
   /*
    * The current status for the workspace.
    */
-  Status status = 3;
+  WorkspaceSessionStatus status = 3;
 
   /*
    * Exit Code for the workspace.
@@ -110,15 +111,7 @@ message CreateRequest {
   int64 workspace_id = 1;
 }
 
-message CreateResponse {
-  WorkspaceSession workspace_session = 1;
-}
-
 message UpdateRequest {
-  WorkspaceSession workspace_session = 1;
-}
-
-message UpdateResponse {
   WorkspaceSession workspace_session = 1;
 }
 
@@ -128,26 +121,30 @@ message DeleteRequest {
   int64 session_id = 2;
 }
 
-message DeleteResponse {
-  WorkspaceSession workspace_session = 1;
-}
-
 message GetRequest {
   int64 workspace_id = 1;
 
   int64 session_id = 2;
 }
 
-message GetResponse {
-  WorkspaceSession workspace_session = 1;
-}
-
 message ListRequest {
   repeated int64 workspace_id = 1;
 
-  repeated Status status = 2;
+  repeated int64 user_id = 2;
+
+  repeated WorkspaceSessionStatus status = 3;
+
+  int32 page_size = 9;
+
+  string page_token = 10;
 }
 
 message ListResponse {
   repeated WorkspaceSession workspace_session = 1;
+
+  int32 total_count = 3;
+
+  int32 offset = 4;
+
+  string next_page_token = 5;
 }

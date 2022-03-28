@@ -18,7 +18,6 @@ pub mod app {
   }
 }
 
-
 pub mod longrunning {
   tonic::include_proto!("longrunning");
 }
@@ -30,3 +29,15 @@ pub mod cluster {
 pub mod health {
   pub use tonic_health::*;
 }
+
+mod rappel {
+  mod process {
+    tonic::include_proto!("rappel.process");
+  }
+
+  mod workspace {
+    tonic::include_proto!("rappel.workspace");
+  }
+}
+
+pub use rappel::*;

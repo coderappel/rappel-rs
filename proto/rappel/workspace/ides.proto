@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package rappel.workspace;
+
+import "rappel/process/status.proto";
+import "longrunning/operations.proto";
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+
+service Ides {
+  rpc Create(CreateIdeRequest) returns (longrunning.Operation) {
+    option (google.api.http) = {
+      post: "/api/v1/workspaces/{workspace_id}/ides",
+      body: "*"
+    };
+  }
+
+  rpc List(ListIdeRequest) returns (ListIdeResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/workspaces/{workspace_id}/ides"
+    };
+  }
+
+  rpc Get(GetIdeRequest) returns (Ide) {
+    option (google.api.http) = {
+      get: "/api/v1/workspaces/{workspace_id}/ides/{ide_id}"
+    };
+  }
+  
+  rpc Delete(DeleteIdeRequest) returns (longrunning.Operation) {
+    option (google.api.http) = {
+      delete: "/api/v1/workspaces/{workspace_id}/ides/{ide_id}"
+    };
+  }
+}
+
+message Ide {
+  int64 ide_id = 1;
+
+  string display_name = 5;
+
+  rappel.process.Status status = 7;
+
+  string command = 8;
+
+  repeated string args = 9;
+
+  string target_address = 10;
+
+  string version = 11;
+
+  rappel.process.ExitStatus exit_status = 15;
+
+  google.protobuf.Timestamp creation_ts = 20;
+}
+
+message CreateIdeRequest {
+  int64 workspace_id = 1;
+
+  repeated string args = 3;
+}
+
+message ListIdeRequest {
+  int64 workspace_id = 1;
+}
+
+message ListIdeResponse {
+  repeated Ide ides = 1;
+}
+
+message GetIdeRequest {
+  int64 workspace_id = 1;
+
+  int64 ide_id = 2;
+}
+
+message DeleteIdeRequest {
+  int64 workspace_id = 1;
+
+  int64 ide_id = 2;
+}

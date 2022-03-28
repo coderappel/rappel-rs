@@ -25,7 +25,7 @@ tokio = {version = "1", features = ["full"]}
 
 chrono = "0.4"
 
-redis = {version = "0.21.5", features = ["tokio-comp", "tokio-native-tls-comp", "r2d2", "connection-manager"]}
+redis = {version = "0.21.5", features = ["tokio-comp", "r2d2", "connection-manager"]}
 serde-redis = "0.12.0"
 uuid = {version = "0.8", features = ["serde", "v4"] }
 

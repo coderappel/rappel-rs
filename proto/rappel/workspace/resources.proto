@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package rappel.workspace;
+
+message Disk {
+  string mount_point = 1;
+
+  string disk_type = 2;
+
+  int32 disk_size_mb = 3;
+
+  string disk_image_url = 4;
+
+  bool is_persistent = 5;
+}

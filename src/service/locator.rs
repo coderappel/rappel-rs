@@ -6,9 +6,10 @@ use super::client::ShardedClient;
 
 #[derive(Debug, Clone)]
 pub struct ServiceLocator {
-  config: super::config::Config,
   workspace_nodes: ShardedClient<WorkspaceNodesClient<Channel>>
 }
+
+const ERROR_MISSING_SERVICE: &str = "Missing Service";
 
 impl ServiceLocator {
 
@@ -21,15 +22,17 @@ impl ServiceLocator {
     let config: super::config::Config = conf.try_deserialize()?;
 
     Ok(ServiceLocator {
-      config: config.clone(),
       workspace_nodes: ShardedClient::try_new(
         config.cluster, 
         WorkspaceNodesClient::new).await?,
     })
   }
 
-  pub async fn workspace_nodes(&self) -> Result<ShardedClient<WorkspaceNodesClient<Channel>>, super::Error> {
-    Ok(self.workspace_nodes.clone())
+  pub async fn get_client(&self, svc: &str) -> Result<ShardedClient<WorkspaceNodesClient<Channel>>, super::Error> {
+    match svc {
+      "cluster.WorkspaceNodes" => Ok(self.workspace_nodes.clone()),
+      _ => Err(super::Error::MissingClient(ERROR_MISSING_SERVICE.to_string())),
+    }
   }
 
 }
