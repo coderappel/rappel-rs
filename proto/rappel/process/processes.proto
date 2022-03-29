@@ -3,12 +3,15 @@ syntax = "proto3";
 package rappel.process;
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/field_mask.proto";
 import "longrunning/operation.proto";
 import "rappel/process/status.proto";
 
 service Processes {
   rpc Create(CreateProcessRequest) returns (longrunning.Operation);
 
+  rpc Get(GetProcessRequest) returns (Process);
+  
   rpc List(ListProcessRequest) returns (ListProcessResponse);
 
   rpc Delete(DeleteProcessRequest) returns (longrunning.Operation);
@@ -28,7 +31,11 @@ message CreateProcessRequest {
   Process process = 1;
 }
 
-message ListProcessRequest {}
+message ListProcessRequest {
+  repeated string cmd = 1;
+
+  google.protobuf.FieldMask field_mask = 5;
+}
 
 message ListProcessResponse {
   repeated Process process = 1;
@@ -38,4 +45,8 @@ message DeleteProcessRequest {
   int64 process_id = 1;
 
   int32 signal = 2;
+}
+
+message GetProcessRequest {
+  int64 process_id = 1;
 }

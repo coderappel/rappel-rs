@@ -1,4 +1,3 @@
-use prost::Message;
 use crate::grpc::RequestContext;
 use crate::proto::longrunning::Operation;
 
