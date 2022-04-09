@@ -4,7 +4,7 @@ package rappel.process;
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/field_mask.proto";
-import "longrunning/operation.proto";
+import "longrunning/operations.proto";
 import "rappel/process/status.proto";
 
 service Processes {

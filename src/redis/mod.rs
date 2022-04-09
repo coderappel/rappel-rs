@@ -4,6 +4,7 @@ use redis::RedisResult;
 use redis::RedisWrite;
 use redis::ToRedisArgs;
 use redis::Value;
+pub use redis::*;
 
 #[derive(Debug, Clone)]
 pub struct ProtoValue<T: prost::Message>(pub T);

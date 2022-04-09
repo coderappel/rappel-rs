@@ -11,6 +11,7 @@ fn main() {
         "proto/app/session.proto",
         "proto/rappel/workspace/ides.proto",
         "proto/rappel/workspace/workspaces.proto",
+        "proto/rappel/process/processes.proto",
       ],
       &["proto"],
     )

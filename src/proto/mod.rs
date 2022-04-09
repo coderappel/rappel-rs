@@ -8,7 +8,7 @@ pub mod app {
   pub mod resource {
     tonic::include_proto!("app.resource");
   }
-  
+
   pub mod workspace {
     tonic::include_proto!("app.workspace");
   }
@@ -30,14 +30,15 @@ pub mod health {
   pub use tonic_health::*;
 }
 
-mod rappel {
-  mod process {
+pub mod rappel {
+  pub mod process {
     tonic::include_proto!("rappel.process");
   }
 
-  mod workspace {
+  pub mod workspace {
     tonic::include_proto!("rappel.workspace");
   }
 }
 
-pub use rappel::*;
+pub use rappel::process;
+pub use rappel::workspace;

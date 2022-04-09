@@ -1,8 +1,11 @@
-use crate::grpc::RequestContext;
-use crate::proto::longrunning::Operation;
-
+#[allow(unused_imports)]
+use prost::Message;
 #[cfg(feature = "redis-store")]
 use redis::AsyncCommands;
+use tracing::Instrument;
+
+use crate::grpc::RequestContext;
+use crate::proto::longrunning::Operation;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -18,7 +21,7 @@ pub enum Error {
 
   #[error("Internal Error")]
   Internal(#[from] anyhow::Error),
-  
+
   #[error("Not Found")]
   NotFound,
 
@@ -38,12 +41,12 @@ pub trait OperationsStore {
 #[cfg(feature = "redis-store")]
 #[derive(Debug)]
 pub struct RedisStore {
-  client: redis::Client,
+  client: crate::redis::Client,
 }
 
 #[cfg(feature = "redis-store")]
 impl RedisStore {
-  pub fn new(client: redis::Client) -> Self {
+  pub fn new(client: crate::redis::Client) -> Self {
     Self { client }
   }
 }
@@ -53,7 +56,7 @@ impl RedisStore {
 impl OperationsStore for RedisStore {
   async fn get(&self, id: &str, _ctx: &RequestContext) -> Result<Operation, Error> {
     let mut conn = self.client.get_async_connection().await?;
-    let value = conn.get(id).await?;
+    let value = conn.get(id).instrument(tracing::info_span!("redis")).await?;
 
     let value: Result<bytes::Bytes, Error> = match value {
       redis::Value::Nil => Err(Error::NotFound),
@@ -72,26 +75,29 @@ impl OperationsStore for RedisStore {
     let buf = buf.to_vec();
 
     let mut conn = self.client.get_async_connection().await?;
-    conn.set(op.operation_id, buf).await.map_err(|e| e.into())
+    conn.set(op.operation_id, buf).instrument(tracing::info_span!("redis")).await.map_err(|e| e.into())
   }
 
-  async fn delete(&mut self, _id: &str, _ctx: &RequestContext) -> Result<(), Error> {
-    unimplemented!("Not Implemented")
+  async fn delete(&mut self, id: &str, _ctx: &RequestContext) -> Result<(), Error> {
+    let mut conn = self.client.get_async_connection().await?;
+    conn.del(id).instrument(tracing::info_span!("redis")).await.map_err(|e| e.into())
   }
 }
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use redis::AsyncCommands;
-  use super::OperationsStore;
+
   use crate::proto::longrunning::Operation;
+
+  use super::*;
+  use super::OperationsStore;
 
   #[cfg(feature = "redis-store")]
   #[tokio::test]
   async fn test_redis_store_to_get_value() {
     let ctx = RequestContext { user_id: 1 };
-    let client = redis::Client::open("redis://127.0.0.1/").unwrap();
+    let client = crate::redis::Client::open("redis://127.0.0.1/").unwrap();
     let store = RedisStore::new(client);
 
     let error = store.get("non_existing_id", &ctx).await.err().unwrap();
@@ -106,7 +112,7 @@ mod tests {
   #[tokio::test]
   async fn test_redis_store_to_get_existing_value() {
     let ctx = RequestContext { user_id: 1 };
-    let client = redis::Client::open("redis://127.0.0.1/").unwrap();
+    let client = crate::redis::Client::open("redis://127.0.0.1/").unwrap();
     let mut store = RedisStore::new(client);
     let operation_id = uuid::Uuid::new_v4().to_string();
     let mut operation = Operation::default();

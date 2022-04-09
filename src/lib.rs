@@ -17,7 +17,7 @@ pub mod prost;
 #[cfg(feature = "proto")]
 pub mod kube;
 
-#[cfg(feature = "redis")]
+#[cfg(feature = "redis-tokio")]
 pub mod redis;
 
 pub mod service;

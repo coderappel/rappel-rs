@@ -7,8 +7,9 @@ edition = "2021"
 [features]
 default = ["longrunning"]
 proto = []
+redis-tokio = []
 longrunning = ["proto"]
-redis-store = ["longrunning"]
+redis-store = ["longrunning", "redis-tokio"]
 
 [dependencies]
 bytes = "1"
