@@ -12,7 +12,7 @@ import "rappel/process/status.proto";
 import "google/api/annotations.proto";
 
 service Workspaces {
-  rpc Create(CreateWorkspaceRequest) returns (longrunning.Operation) {
+  rpc Create(CreateWorkspaceRequest) returns (Workspace) {
     option (google.api.http) = {
       post: "/api/v1/workspaces",
       body: "*"

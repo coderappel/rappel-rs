@@ -1,5 +1,7 @@
 pub mod grpc;
 pub mod store;
+pub mod identifier;
+
 use tonic::transport::Channel;
 use crate::proto::longrunning::Operation;
 use crate::proto::longrunning::GetOperationRequest;

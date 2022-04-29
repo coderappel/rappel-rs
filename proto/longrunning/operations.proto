@@ -11,7 +11,7 @@ package longrunning;
 message Operation {
   string operation_id = 1;
 
-  google.protobuf.Any metadata = 2;
+  map<string, string> metadata = 2;
 
   bool done = 3;
 

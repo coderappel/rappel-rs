@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 #[allow(unused_imports)]
 use prost::Message;
 #[cfg(feature = "redis-store")]
@@ -30,7 +31,7 @@ pub enum Error {
 }
 
 #[async_trait::async_trait]
-pub trait OperationsStore {
+pub trait OperationsStore: Send + Sync + Debug {
   async fn get(&self, id: &str, ctx: &RequestContext) -> Result<Operation, Error>;
 
   async fn set(&mut self, op: Operation, ctx: &RequestContext) -> Result<(), Error>;
