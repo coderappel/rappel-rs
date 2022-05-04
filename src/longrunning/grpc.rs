@@ -1,11 +1,14 @@
 use std::sync::Arc;
+
 use tokio::sync::Mutex;
-use super::store::Error;
-use super::store::OperationsStore;
-use crate::proto::longrunning::Operation;
-use crate::proto::longrunning::GetOperationRequest;
+
 use crate::proto::longrunning::CancelOperationRequest;
+use crate::proto::longrunning::GetOperationRequest;
+use crate::proto::longrunning::Operation;
 use crate::proto::longrunning::operations_server;
+
+use super::Error;
+use super::store::OperationsStore;
 
 #[derive(Debug, Clone)]
 pub struct Service<S: OperationsStore> {
@@ -33,7 +36,7 @@ impl<S: 'static> operations_server::Operations for Service<S>
     let operation_id = request.into_inner().operation_id;
     let store = self.store.clone();
     let store = store.lock().await;
-    let result = store.get(&operation_id, &ctx).await;
+    let result: Result<Operation, Error> = store.get(&operation_id, &ctx).await;
 
     result
       .map(|operation| tonic::Response::new(operation))

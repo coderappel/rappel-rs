@@ -1,6 +1,11 @@
 pub mod grpc;
 pub mod store;
 pub mod identifier;
+mod types;
+mod worker;
+
+pub use types::*;
+pub use worker::*;
 
 use tonic::transport::Channel;
 use crate::proto::longrunning::Operation;
