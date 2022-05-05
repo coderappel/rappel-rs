@@ -16,9 +16,6 @@ pub enum Error {
   #[error("Read error")]
   RedisError(#[from] redis::RedisError),
 
-  #[error("Decode error")]
-  SerdeRedisDecodeError(#[from] serde_redis::decode::Error),
-
   #[error("Deserialization failed")]
   ProstDecodeError(#[from] prost::DecodeError),
 
@@ -138,7 +135,7 @@ pub trait Broker {
 
 pub trait Worker {
   fn start(&mut self) -> Result<(), Error>;
-
+  fn stop(&mut self) -> Result<(), Error>;
   fn join(&mut self) -> Result<(), Error>;
 }
 

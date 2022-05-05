@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::thread::JoinHandle;
@@ -7,7 +8,7 @@ use std::time::Duration;
 use futures::executor::block_on;
 use uuid::Uuid;
 
-use crate::longrunning::{Broker, Error, Performable, State, TaskResult, TaskState, TaskStore, WorkerStore};
+use crate::longrunning::{Broker, Error, Performable, State, TaskResult, TaskState, TaskStore, Worker, WorkerStore};
 use crate::longrunning::store::{RedisTaskStore, RedisWorkerStore};
 
 #[derive(Debug, Clone)]
@@ -18,13 +19,13 @@ pub struct DefaultContext {
 
 #[allow(dead_code)]
 #[derive(Debug)]
-pub struct DefaultWorker<T: Performable, R> {
+pub struct DefaultWorker<T: Performable, R: TaskResult> {
   pub worker_id: String,
   pub queue: String,
   task_store: RedisTaskStore,
   worker_store: RedisWorkerStore,
   handle: Option<JoinHandle<()>>,
-  running: AtomicBool,
+  running: Arc<AtomicBool>,
   _phantom1: PhantomData<T>,
   _phantom2: PhantomData<R>,
 }
@@ -70,16 +71,16 @@ impl<T: Performable, R: TaskResult> DefaultWorker<T, R> {
       queue,
       task_store,
       worker_store,
-      worker_id: Uuid::new_v4().to_string(),
+      worker_id: format!("workers/{}", Uuid::new_v4()),
       handle: None,
-      running: AtomicBool::new(false),
+      running: Arc::new(AtomicBool::new(false)),
       _phantom1: PhantomData,
       _phantom2: PhantomData,
     }
   }
 
-  async fn run(queue: String, mut task_store: RedisTaskStore) {
-    loop {
+  async fn run(queue: String, mut task_store: RedisTaskStore, token: Arc<AtomicBool>) {
+    while token.load(Ordering::SeqCst) {
       match task_store.dequeue::<T, R>(queue.clone()).await {
         Ok(t) => {
           let task = t.task;
@@ -107,14 +108,20 @@ impl<T: Performable, R: TaskResult> super::Worker for DefaultWorker<T, R> {
     let worker_id = self.worker_id.clone();
     let queue = self.queue.clone();
     let task_store = self.task_store.clone();
+    let token = self.running.clone();
     tracing::debug!(message = "Starting worker", %worker_id, %queue);
 
     block_on(self.worker_store.register(worker_id.clone(), vec![queue.clone()]))?;
-    let handle = std::thread::spawn(move || block_on(Self::run(queue, task_store)));
+    let handle = std::thread::spawn(move || block_on(Self::run(queue, task_store, token)));
 
     self.handle = Some(handle);
     self.running.swap(true, Ordering::SeqCst);
     tracing::info!(message = "Started worker", %worker_id);
+    Ok(())
+  }
+
+  fn stop(&mut self) -> Result<(), Error> {
+    self.running.swap(false, Ordering::SeqCst);
     Ok(())
   }
 
@@ -132,12 +139,13 @@ impl<T: Performable, R: TaskResult> super::Worker for DefaultWorker<T, R> {
   }
 }
 
-impl<T: Performable, R> Drop for DefaultWorker<T, R> {
+impl<T: Performable, R: TaskResult> Drop for DefaultWorker<T, R> {
   fn drop(&mut self) {
     let worker_id = self.worker_id.clone();
     tracing::info!(message = "Unregistering worker", %worker_id);
 
     let _ = block_on(self.worker_store.unregister(worker_id));
+    let _ = self.stop();
   }
 }
 
