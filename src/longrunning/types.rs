@@ -1,6 +1,7 @@
 use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::marker::PhantomData;
 
 use chrono::NaiveDateTime;
 use chrono::Timelike;
@@ -40,22 +41,22 @@ pub enum Error {
 }
 
 #[async_trait::async_trait]
-pub trait Context: Send {
+pub trait Context: Clone + Send + Sync {
   fn task_id(&self) -> &str;
 
-  async fn failure<T: Performable, R: TaskResult>(&mut self, result: R, msg: String) -> Result<(), Error>;
+  async fn failure<T: Performable<Self>, R: TaskResult>(&mut self, result: R, msg: String) -> Result<(), Error>;
 
-  async fn success<T: Performable, R: TaskResult>(&mut self, result: R) -> Result<(), Error>;
+  async fn success<T: Performable<Self>, R: TaskResult>(&mut self, result: R) -> Result<(), Error>;
 }
 
 #[async_trait::async_trait]
-pub trait Performable: Serialize + DeserializeOwned + Send + Sync + Sized + Clone + Any {
-  async fn perform<C: Context>(&self, ctx: C) -> Result<(), Error>;
+pub trait Performable<C: Context>: Serialize + DeserializeOwned + Send + Sync + Sized + Clone + Any {
+  async fn perform(&self, ctx: C) -> Result<(), Error>;
 }
 
 #[async_trait::async_trait]
-impl Performable for serde_json::Value {
-  async fn perform<C: Context>(&self, _ctx: C) -> Result<(), Error> {
+impl<C: 'static + Context> Performable<C> for serde_json::Value {
+  async fn perform(&self, _ctx: C) -> Result<(), Error> {
     panic!("method should never be invoked")
   }
 }
@@ -73,14 +74,14 @@ pub trait TaskResult: Debug + Clone + Send + Sync + Serialize + DeserializeOwned
   fn as_any(&self) -> &dyn Any;
 }
 
-impl <T: Debug + Clone + Send + Sync + Serialize + DeserializeOwned + Any>TaskResult for T {
+impl<T: Debug + Clone + Send + Sync + Serialize + DeserializeOwned + Any> TaskResult for T {
   fn as_any(&self) -> &dyn Any {
     self
   }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskState<T, R> {
+pub struct TaskState<C,T,R> {
   pub id: String,
   pub task: T,
   pub result: Option<R>,
@@ -90,9 +91,10 @@ pub struct TaskState<T, R> {
   pub created_at: NaiveDateTime,
   pub started_at: Option<NaiveDateTime>,
   pub processed_at: Option<NaiveDateTime>,
+  _phantom: PhantomData<C>,
 }
 
-impl<T: Performable, R> TaskState<T, R> {
+impl<C: Context, T: Performable<C>, R> TaskState<C, T, R> {
   pub fn new(id: String, task: T) -> Self {
     Self {
       id,
@@ -104,34 +106,35 @@ impl<T: Performable, R> TaskState<T, R> {
       created_at: Utc::now().naive_utc(),
       started_at: None,
       processed_at: None,
+      _phantom: PhantomData,
     }
   }
 }
 
 #[async_trait::async_trait]
 pub trait TaskStore {
-  async fn get<T: Performable, R: TaskResult>(&self, id: String) -> Result<TaskState<T, R>, Error>;
+  async fn get<C: Context, T: Performable<C>, R: TaskResult>(&self, id: String) -> Result<TaskState<C, T, R>, Error>;
 
-  async fn start<T: Performable, R: TaskResult>(&self, id: String) -> Result<TaskState<T, R>, Error>;
+  async fn start<C: Context, T: Performable<C>, R: TaskResult>(&self, id: String) -> Result<TaskState<C, T, R>, Error>;
 
-  async fn complete<T: Performable, R: TaskResult>(&self, id: String, result: R) -> Result<TaskState<T, R>, Error>;
+  async fn complete<C: Context, T: Performable<C>, R: TaskResult>(&self, id: String, result: R) -> Result<TaskState<C, T, R>, Error>;
 
-  async fn fail<T: Performable, R: TaskResult>(&self, id: String, code: i32, msg: String) -> Result<TaskState<T, R>, Error>;
+  async fn fail<C: Context, T: Performable<C>, R: TaskResult>(&self, id: String, code: i32, msg: String) -> Result<TaskState<C, T, R>, Error>;
 
-  async fn enqueue<T: Performable, R: TaskResult>(&mut self, task: T, q: String) -> Result<TaskState<T, R>, Error>;
+  async fn enqueue<C: Context, T: Performable<C>, R: TaskResult>(&mut self, task: T, q: String) -> Result<TaskState<C, T, R>, Error>;
 
-  async fn dequeue<T: Performable, R: TaskResult>(&mut self, q: String) -> Result<TaskState<T, R>, Error>;
+  async fn dequeue<C: Context, T: Performable<C>, R: TaskResult>(&mut self, q: String) -> Result<TaskState<C, T, R>, Error>;
 
   async fn remove(&mut self, id: String) -> Result<(), Error>;
 }
 
 #[async_trait::async_trait]
-pub trait Broker<T: Performable, R: TaskResult> {
-  async fn enqueue(&mut self, task: T) -> Result<TaskState<T, R>, Error>;
+pub trait Broker<C: Context, T: Performable<C>, R: TaskResult> {
+  async fn enqueue(&mut self, task: T) -> Result<TaskState<C, T, R>, Error>;
 
-  async fn get(&self, id: String) -> Result<TaskState<T, R>, Error>;
+  async fn get(&self, id: String) -> Result<TaskState<C, T, R>, Error>;
 
-  async fn cancel(&mut self, id: String) -> Result<TaskState<T, R>, Error>;
+  async fn cancel(&mut self, id: String) -> Result<TaskState<C, T, R>, Error>;
 }
 
 pub trait Worker {
@@ -149,7 +152,7 @@ pub trait WorkerStore {
   async fn unregister(&mut self, worker_id: String) -> Result<(), Error>;
 }
 
-impl<T: Serialize, R> Into<Operation> for TaskState<T, R> {
+impl<C: Context, T: Serialize, R> Into<Operation> for TaskState<C, T, R> {
   fn into(self) -> Operation {
     let task = &self.task;
 
