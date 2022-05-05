@@ -31,6 +31,9 @@ pub enum Error {
   #[error("{0}")]
   InvalidRequest(&'static str),
 
+  #[error("Box Error (probably from thread)")]
+  BoxError(Box<dyn Any + Send + 'static>),
+
   #[error("not found")]
   NotFound,
 
@@ -133,11 +136,19 @@ pub trait Broker {
   async fn cancel<T: Performable, R: TaskResult>(&mut self, id: String) -> Result<TaskState<T, R>, Error>;
 }
 
-#[async_trait::async_trait]
 pub trait Worker {
-  async fn start(&mut self) -> Result<(), Error>;
+  fn start(&mut self) -> Result<(), Error>;
 
-  async fn stop(&mut self) -> Result<(), Error>;
+  fn join(&mut self) -> Result<(), Error>;
+}
+
+#[async_trait::async_trait]
+pub trait WorkerStore {
+  async fn register(&mut self, worker_id: String, queue: Vec<String>) -> Result<(), Error>;
+
+  async fn heartbeat(&mut self, worker_id: String) -> Result<(), Error>;
+
+  async fn unregister(&mut self, worker_id: String) -> Result<(), Error>;
 }
 
 impl<T: Serialize, R> Into<Operation> for TaskState<T, R> {

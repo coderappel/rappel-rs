@@ -18,7 +18,9 @@ use tracing::Instrument;
 use uuid::Uuid;
 
 use crate::grpc::RequestContext;
-use crate::longrunning::{Error, TaskResult};
+use crate::longrunning::Error;
+use crate::longrunning::TaskResult;
+use crate::longrunning::WorkerStore;
 use crate::longrunning::Performable;
 use crate::longrunning::TaskState;
 use crate::longrunning::TaskStore;
@@ -229,6 +231,49 @@ impl super::TaskStore for RedisTaskStore {
       .del(id.clone())
       .query_async(&mut conn)
       .instrument(tracing::info_span!("redis-task-store:del")).await?;
+
+    Ok(())
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct RedisWorkerStore {
+  client: redis::Client,
+}
+
+impl RedisWorkerStore {
+  pub fn new(client: redis::Client) -> Self {
+    Self {
+      client
+    }
+  }
+}
+
+#[async_trait::async_trait]
+impl WorkerStore for RedisWorkerStore {
+  async fn register(&mut self, worker_id: String, queue: Vec<String>) -> Result<(), Error> {
+    let mut conn = self.client.get_async_connection().await?;
+    let _ = redis::pipe()
+      .hset(format!("worker/{}", worker_id), "queue", queue.join(","))
+      .hset(format!("worker/{}", worker_id), "heartbeat", Utc::now().timestamp())
+      .query_async(&mut conn)
+      .instrument(tracing::info_span!("redis-worker-store:register")).await?;
+
+    Ok(())
+  }
+
+  async fn heartbeat(&mut self, worker_id: String) -> Result<(), Error> {
+    let mut conn = self.client.get_async_connection().await?;
+    let _ = conn.hset(format!("worker/{}", worker_id), "heartbeat", Utc::now().timestamp())
+      .instrument(tracing::info_span!("redis-worker-store:heartbeat")).await?;
+
+    Ok(())
+  }
+
+  async fn unregister(&mut self, worker_id: String) -> Result<(), Error> {
+    let mut conn = self.client.get_async_connection().await?;
+    let _ = conn.del(format!("worker/{}", worker_id))
+      .instrument(tracing::info_span!("redis-worker-store:unregister")).await?;
 
     Ok(())
   }
