@@ -3,6 +3,12 @@ use uuid::Uuid;
 use crate::longrunning::{Broker, Error, Performable, State, TaskResult, TaskState, TaskStore};
 use crate::longrunning::store::RedisTaskStore;
 
+#[derive(Debug, Clone)]
+pub struct DefaultContext {
+  task_id: String,
+  task_store: RedisTaskStore,
+}
+
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct DefaultWorker {
@@ -16,6 +22,36 @@ pub struct DefaultBroker {
   task_store: RedisTaskStore,
   queue: String,
 }
+
+impl DefaultContext {
+  pub fn new(task_id: String, task_store: RedisTaskStore) -> Self {
+    Self {
+      task_id,
+      task_store,
+    }
+  }
+}
+
+#[async_trait::async_trait]
+impl super::Context for DefaultContext {
+  fn task_id(&self) -> &str {
+    &self.task_id
+  }
+
+  async fn failure<T: Performable, R: TaskResult>(&mut self, result: R, msg: String) -> Result<(), Error> {
+    let code = match result.as_any().downcast_ref::<i32>() {
+      Some(i) => *i,
+      None => 1
+    };
+
+    self.task_store.fail::<T, R>(self.task_id.clone(), code, msg).await.map(|_| ())
+  }
+
+  async fn success<T: Performable, R: TaskResult>(&mut self, result: R) -> Result<(), Error> {
+    self.task_store.complete::<T, R>(self.task_id.clone(), result).await.map(|_| ())
+  }
+}
+
 
 impl DefaultWorker {
   pub fn new(queue: String, task_store: RedisTaskStore) -> Self {

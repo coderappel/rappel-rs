@@ -40,5 +40,5 @@ pub mod rappel {
   }
 }
 
-pub use rappel::process;
-pub use rappel::workspace;
+pub use self::rappel::process;
+pub use self::rappel::workspace;

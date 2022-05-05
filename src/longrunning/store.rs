@@ -261,11 +261,11 @@ mod tests {
       "task-id"
     }
 
-    async fn failure<R: TaskResult>(&mut self, result: R, msg: String) -> Result<(), Error> {
+    async fn failure<T: Performable, R: TaskResult>(&mut self, result: R, msg: String) -> Result<(), Error> {
       Ok(())
     }
 
-    async fn success<R: TaskResult>(&mut self, result: R) -> Result<(), Error> {
+    async fn success<T: Performable, R: TaskResult>(&mut self, result: R) -> Result<(), Error> {
       Ok(())
     }
   }

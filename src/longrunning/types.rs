@@ -42,9 +42,9 @@ pub enum Error {
 pub trait Context: Send {
   fn task_id(&self) -> &str;
 
-  async fn failure<R: TaskResult>(&mut self, result: R, msg: String) -> Result<(), Error>;
+  async fn failure<T: Performable, R: TaskResult>(&mut self, result: R, msg: String) -> Result<(), Error>;
 
-  async fn success<R: TaskResult>(&mut self, result: R) -> Result<(), Error>;
+  async fn success<T: Performable, R: TaskResult>(&mut self, result: R) -> Result<(), Error>;
 }
 
 #[async_trait::async_trait]
@@ -68,15 +68,15 @@ pub enum State {
   Terminated = 4,
 }
 
-pub trait TaskResult: Debug + Clone + Send + Sync + Serialize + DeserializeOwned {}
+pub trait TaskResult: Debug + Clone + Send + Sync + Serialize + DeserializeOwned + Any {
+  fn as_any(&self) -> &dyn Any;
+}
 
-impl TaskResult for () {}
-
-impl TaskResult for i32 {}
-
-impl TaskResult for String {}
-
-impl TaskResult for serde_json::Value {}
+impl <T: Debug + Clone + Send + Sync + Serialize + DeserializeOwned + Any>TaskResult for T {
+  fn as_any(&self) -> &dyn Any {
+    self
+  }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskState<T, R> {
