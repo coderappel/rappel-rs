@@ -2,7 +2,8 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
-use chrono::{NaiveDateTime, Timelike};
+use chrono::NaiveDateTime;
+use chrono::Timelike;
 use chrono::Utc;
 use prost_types::Timestamp;
 use serde::de::DeserializeOwned;
@@ -125,12 +126,12 @@ pub trait TaskStore {
 }
 
 #[async_trait::async_trait]
-pub trait Broker {
-  async fn enqueue<T: Performable, R: TaskResult>(&mut self, task: T) -> Result<TaskState<T, R>, Error>;
+pub trait Broker<T: Performable, R: TaskResult> {
+  async fn enqueue(&mut self, task: T) -> Result<TaskState<T, R>, Error>;
 
-  async fn get<T: Performable, R: TaskResult>(&self, id: String) -> Result<TaskState<T, R>, Error>;
+  async fn get(&self, id: String) -> Result<TaskState<T, R>, Error>;
 
-  async fn cancel<T: Performable, R: TaskResult>(&mut self, id: String) -> Result<TaskState<T, R>, Error>;
+  async fn cancel(&mut self, id: String) -> Result<TaskState<T, R>, Error>;
 }
 
 pub trait Worker {

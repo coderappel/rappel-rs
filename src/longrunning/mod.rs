@@ -6,6 +6,8 @@ mod worker;
 
 pub use types::*;
 pub use worker::*;
+pub use store::RedisTaskStore;
+pub use store::RedisWorkerStore;
 
 use tonic::transport::Channel;
 use crate::proto::longrunning::Operation;

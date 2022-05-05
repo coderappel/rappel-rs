@@ -8,7 +8,7 @@ use std::time::Duration;
 use futures::executor::block_on;
 use uuid::Uuid;
 
-use crate::longrunning::{Broker, Error, Performable, State, TaskResult, TaskState, TaskStore, Worker, WorkerStore};
+use crate::longrunning::{Broker, Context, Error, Performable, State, TaskResult, TaskState, TaskStore, Worker, WorkerStore};
 use crate::longrunning::store::{RedisTaskStore, RedisWorkerStore};
 
 #[derive(Debug, Clone)]
@@ -17,23 +17,46 @@ pub struct DefaultContext {
   task_store: RedisTaskStore,
 }
 
+pub trait ContextProvider<T: Context>: Clone + Send + Sync + Sized {
+  fn get(&self, task_id: String) -> T;
+}
+
+#[derive(Clone, Debug)]
+pub struct DefaultContextProvider(RedisTaskStore);
+
+impl ContextProvider<DefaultContext> for DefaultContextProvider {
+  fn get(&self, task_id: String) -> DefaultContext {
+    DefaultContext::new(task_id, self.0.clone())
+  }
+}
+
 #[allow(dead_code)]
 #[derive(Debug)]
-pub struct DefaultWorker<T: Performable, R: TaskResult> {
+pub struct DefaultWorker<T, R, S, P>
+  where
+    T: Performable,
+    R: TaskResult,
+    S: Context,
+    P: 'static + ContextProvider<S>
+{
   pub worker_id: String,
   pub queue: String,
   task_store: RedisTaskStore,
   worker_store: RedisWorkerStore,
   handle: Option<JoinHandle<()>>,
   running: Arc<AtomicBool>,
+  ctx_provider: Arc<P>,
   _phantom1: PhantomData<T>,
   _phantom2: PhantomData<R>,
+  _phantom3: PhantomData<S>,
 }
 
 #[derive(Debug, Clone)]
-pub struct DefaultBroker {
+pub struct DefaultBroker<T: Performable, R: TaskResult> {
   task_store: RedisTaskStore,
   queue: String,
+  _phantom1: PhantomData<T>,
+  _phantom2: PhantomData<R>,
 }
 
 impl DefaultContext {
@@ -65,10 +88,17 @@ impl super::Context for DefaultContext {
   }
 }
 
-impl<T: Performable, R: TaskResult> DefaultWorker<T, R> {
-  pub fn new(queue: String, task_store: RedisTaskStore, worker_store: RedisWorkerStore) -> Self {
+impl<T, R, S, P> DefaultWorker<T, R, S, P>
+  where
+    T: Performable,
+    R: TaskResult,
+    S: Context,
+    P: 'static + ContextProvider<S>
+{
+  pub fn new(queue: String, task_store: RedisTaskStore, worker_store: RedisWorkerStore, ctx_provider: P) -> Self {
     Self {
       queue,
+      ctx_provider: Arc::new(ctx_provider),
       task_store,
       worker_store,
       worker_id: format!("workers/{}", Uuid::new_v4()),
@@ -76,20 +106,21 @@ impl<T: Performable, R: TaskResult> DefaultWorker<T, R> {
       running: Arc::new(AtomicBool::new(false)),
       _phantom1: PhantomData,
       _phantom2: PhantomData,
+      _phantom3: PhantomData,
     }
   }
 
-  async fn run(queue: String, mut task_store: RedisTaskStore, token: Arc<AtomicBool>) {
+  async fn run(queue: String, mut task_store: RedisTaskStore, token: Arc<AtomicBool>, ctx_provider: Arc<P>) {
     while token.load(Ordering::SeqCst) {
       match task_store.dequeue::<T, R>(queue.clone()).await {
         Ok(t) => {
           let task = t.task;
           let task_id = t.id;
-          let ctx = DefaultContext::new(task_id.clone(), task_store.clone());
-          match task.perform(ctx).await {
-            Ok(_) => tracing::info!(message = "Task execution succeeded", %task_id),
+          let context = ctx_provider.get(task_id.clone());
+          match task.perform(context).await {
+            Ok(_) => tracing::info!(message = "Task execution succeeded", % task_id),
             Err(error) => {
-              tracing::error!(message = "Task execution failed", %task_id, %error);
+              tracing::error!(message = "Task execution failed", %task_id, % error);
               let _ = task_store.fail::<T, R>(task_id, 128, error.to_string()).await;
             }
           }
@@ -103,16 +134,17 @@ impl<T: Performable, R: TaskResult> DefaultWorker<T, R> {
   }
 }
 
-impl<T: Performable, R: TaskResult> super::Worker for DefaultWorker<T, R> {
+impl<T: Performable, R: TaskResult, S: Context, P: 'static + ContextProvider<S>> super::Worker for DefaultWorker<T, R, S, P> {
   fn start(&mut self) -> Result<(), Error> {
     let worker_id = self.worker_id.clone();
     let queue = self.queue.clone();
     let task_store = self.task_store.clone();
     let token = self.running.clone();
+    let ctx_provider = self.ctx_provider.clone();
     tracing::debug!(message = "Starting worker", %worker_id, %queue);
 
     block_on(self.worker_store.register(worker_id.clone(), vec![queue.clone()]))?;
-    let handle = std::thread::spawn(move || block_on(Self::run(queue, task_store, token)));
+    let handle = std::thread::spawn(move || block_on(Self::run(queue, task_store, token, ctx_provider)));
 
     self.handle = Some(handle);
     self.running.swap(true, Ordering::SeqCst);
@@ -139,7 +171,7 @@ impl<T: Performable, R: TaskResult> super::Worker for DefaultWorker<T, R> {
   }
 }
 
-impl<T: Performable, R: TaskResult> Drop for DefaultWorker<T, R> {
+impl<T: Performable, R: TaskResult, S: Context, P: ContextProvider<S>> Drop for DefaultWorker<T, R, S, P> {
   fn drop(&mut self) {
     let worker_id = self.worker_id.clone();
     tracing::info!(message = "Unregistering worker", %worker_id);
@@ -149,26 +181,28 @@ impl<T: Performable, R: TaskResult> Drop for DefaultWorker<T, R> {
   }
 }
 
-impl DefaultBroker {
+impl <T: Performable, R: TaskResult> DefaultBroker<T,R> {
   pub fn new(queue: String, task_store: RedisTaskStore) -> Self {
     Self {
       queue,
       task_store,
+      _phantom1: PhantomData,
+      _phantom2: PhantomData,
     }
   }
 }
 
 #[async_trait::async_trait]
-impl Broker for DefaultBroker {
-  async fn enqueue<T: Performable, R: TaskResult>(&mut self, task: T) -> Result<TaskState<T, R>, Error> {
+impl <T: Performable, R: TaskResult> Broker<T,R> for DefaultBroker<T,R> {
+  async fn enqueue(&mut self, task: T) -> Result<TaskState<T, R>, Error> {
     self.task_store.enqueue(task, self.queue.clone()).await
   }
 
-  async fn get<T: Performable, R: TaskResult>(&self, id: String) -> Result<TaskState<T, R>, Error> {
+  async fn get(&self, id: String) -> Result<TaskState<T, R>, Error> {
     self.task_store.get(id).await
   }
 
-  async fn cancel<T: Performable, R: TaskResult>(&mut self, id: String) -> Result<TaskState<T, R>, Error> {
+  async fn cancel(&mut self, id: String) -> Result<TaskState<T, R>, Error> {
     match self.task_store.get(id.clone()).await {
       Ok(t) if t.state != State::Running => {
         let _ = self.task_store.remove(id.clone()).await?;
