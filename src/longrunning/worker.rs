@@ -50,15 +50,15 @@ impl DefaultBroker {
 
 #[async_trait::async_trait]
 impl Broker for DefaultBroker {
-  async fn enqueue<T: Performable>(&mut self, task: T) -> Result<String, Error> {
+  async fn enqueue<T: Performable, R: TaskResult>(&mut self, task: T) -> Result<TaskState<T, R>, Error> {
     self.task_store.enqueue(task, self.queue.clone()).await
   }
 
-  async fn get<T: Performable>(&self, id: String) -> Result<TaskState<T, TaskResult>, Error> {
+  async fn get<T: Performable, R: TaskResult>(&self, id: String) -> Result<TaskState<T, R>, Error> {
     self.task_store.get(id).await
   }
 
-  async fn cancel<T: Performable>(&mut self, id: String) -> Result<TaskState<T, TaskResult>, Error> {
+  async fn cancel<T: Performable, R: TaskResult>(&mut self, id: String) -> Result<TaskState<T, R>, Error> {
     match self.task_store.get(id.clone()).await {
       Ok(t) if t.state != State::Running => {
         let _ = self.task_store.remove(id.clone()).await?;
