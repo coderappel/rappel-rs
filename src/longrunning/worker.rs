@@ -7,6 +7,7 @@ use std::time::Duration;
 use futures::executor::block_on;
 pub use tokio::task::JoinError;
 use tokio::task::JoinHandle;
+use tracing_futures::Instrument;
 use uuid::Uuid;
 
 use crate::longrunning::Broker;
@@ -117,6 +118,7 @@ impl<C, T, R, P> DefaultWorker<C, T, R, P>
           });
 
           let task_id = t.id;
+          let task = task.instrument(tracing::info_span!("task:perform", %task_id));
           match task.await {
             Ok(_) => tracing::info!(message = "Task execution succeeded", % task_id),
             Err(error) => {
@@ -125,8 +127,12 @@ impl<C, T, R, P> DefaultWorker<C, T, R, P>
             }
           }
         }
+        Err(Error::NotFound) => {
+          tracing::debug!(message = "No task in queue. Sleeping");
+          tokio::time::sleep(Duration::from_millis(1000)).await;
+        }
         Err(error) => {
-          tracing::error!(message = "Dequeue task failed", %error);
+          tracing::error!(message = "Failed to read task from queue", %error);
           tokio::time::sleep(Duration::from_millis(1000)).await;
         }
       }
@@ -165,6 +171,8 @@ impl<C: Context, T: Performable<C>, R: TaskResult, P: 'static + ContextProvider<
     tracing::debug!(message = "Starting worker", %worker_id, %queue);
 
     let handle = tokio::spawn(async move {
+      let span = tracing::trace_span!("worker-loop", %worker_id, %queue);
+      let _enter = span.enter();
       Self::run(queue, task_store, token, ctx_provider).await
     });
 

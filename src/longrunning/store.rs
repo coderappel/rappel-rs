@@ -5,7 +5,6 @@ use chrono::Utc;
 use prost::Message;
 use redis::aio::Connection;
 use redis::AsyncCommands;
-use redis::ErrorKind::TypeError;
 use redis::FromRedisValue;
 use redis::RedisError;
 use redis::RedisResult;
@@ -18,12 +17,12 @@ use tracing::Instrument;
 use uuid::Uuid;
 
 use crate::grpc::RequestContext;
-use crate::longrunning::{Context, DefaultContext, Error, State};
 use crate::longrunning::Performable;
 use crate::longrunning::TaskResult;
 use crate::longrunning::TaskState;
 use crate::longrunning::TaskStore;
 use crate::longrunning::WorkerStore;
+use crate::longrunning::{Context, DefaultContext, Error, State};
 use crate::proto::longrunning::Operation;
 
 #[async_trait::async_trait]
@@ -42,14 +41,17 @@ pub struct RedisStore {
 
 impl RedisStore {
   pub fn new(client: redis::Client) -> Self {
-    Self { inner: RedisTaskStore::new(client) }
+    Self {
+      inner: RedisTaskStore::new(client),
+    }
   }
 }
 
 #[async_trait::async_trait]
 impl OperationsStore for RedisStore {
   async fn get(&self, id: &str, _ctx: &RequestContext) -> Result<Operation, Error> {
-    let task_state: TaskState<DefaultContext, serde_json::Value, serde_json::Value> = self.inner.get(id.to_string()).await?;
+    let task_state: TaskState<DefaultContext, serde_json::Value, serde_json::Value> =
+      self.inner.get(id.to_string()).await?;
     Ok(task_state.into())
   }
 
@@ -74,9 +76,7 @@ pub struct RedisTaskStore {
 
 impl RedisTaskStore {
   pub fn new(client: redis::Client) -> Self {
-    Self {
-      client
-    }
+    Self { client }
   }
 
   pub fn new_from_config(config: Config) -> Self {
@@ -85,57 +85,64 @@ impl RedisTaskStore {
     Self::new(client)
   }
 
-  async fn get_task_state<C: Context, T: Performable<C>, R: TaskResult>(id: String, conn: &mut Connection) -> Result<TaskState<C,T, R>, Error> {
-    let response = conn.hget(id, "task")
-      .instrument(tracing::info_span!("redis-task-store:get")).await
-      .map_err(|error| error.into());
+  async fn get_task_state<C: Context, T: Performable<C>, R: TaskResult>(
+    id: String,
+    conn: &mut Connection,
+  ) -> Result<TaskState<C, T, R>, Error> {
+    let response: Value = conn
+      .hget(id, "task")
+      .instrument(tracing::info_span!("redis-task-store:get"))
+      .await?;
 
-    match response {
-      Err(Error::RedisError(err)) if err.kind() == TypeError => Err(Error::NotFound),
-      Err(error) => Err(error),
-      Ok(t) => Ok(t),
+    match &response {
+      Value::Nil => Err(Error::NotFound),
+      _ => TaskState::from_redis_value(&response).map_err(|error| {
+        tracing::debug!(message = "Failed to deserialize task state from redis", %error);
+        error.into()
+      }),
     }
   }
 }
 
-impl<C: Context,T: Performable<C>, R: TaskResult> ToRedisArgs for TaskState<C,T, R> {
-  fn write_redis_args<W>(&self, out: &mut W) where W: ?Sized + RedisWrite {
+impl<C: Context, T: Performable<C>, R: TaskResult> ToRedisArgs for TaskState<C, T, R> {
+  fn write_redis_args<W>(&self, out: &mut W)
+  where
+    W: ?Sized + RedisWrite,
+  {
     out.write_arg(serde_json::to_string(self).unwrap().as_bytes())
   }
 }
 
-impl<C: Context,T: Performable<C>, R: TaskResult> FromRedisValue for TaskState<C,T, R> {
+impl<C: Context, T: Performable<C>, R: TaskResult> FromRedisValue for TaskState<C, T, R> {
   fn from_redis_value(v: &Value) -> RedisResult<Self> {
     let buf: String = redis::FromRedisValue::from_redis_value(v)?;
 
     serde_json::from_str(&buf).map_err(|error| {
       tracing::debug!(message = "Failed to decode value", %error);
-      RedisError::from((
-        redis::ErrorKind::IoError,
-        "Deserialization failed",
-        error.to_string())
-      )
+      RedisError::from((redis::ErrorKind::IoError, "Deserialization failed", error.to_string()))
     })
   }
 }
 
 #[async_trait::async_trait]
 impl super::TaskStore for RedisTaskStore {
-  async fn get<C: Context,T: Performable<C>, R: TaskResult>(&self, id: String) -> Result<TaskState<C,T, R>, Error> {
+  async fn get<C: Context, T: Performable<C>, R: TaskResult>(&self, id: String) -> Result<TaskState<C, T, R>, Error> {
     let mut conn = self.client.get_async_connection().await?;
 
     Self::get_task_state(id, &mut conn).await
   }
 
-  async fn start<C: Context,T: Performable<C>, R: TaskResult>(&self, id: String) -> Result<TaskState<C,T, R>, Error> {
+  async fn start<C: Context, T: Performable<C>, R: TaskResult>(&self, id: String) -> Result<TaskState<C, T, R>, Error> {
     let mut conn = self.client.get_async_connection().await?;
 
     match Self::get_task_state(id.clone(), &mut conn).await {
       Ok(mut task_state) => {
         task_state.state = State::Running;
         task_state.started_at = Some(Utc::now().naive_utc());
-        let _ = conn.hset(id.clone(), "task", task_state.clone())
-          .instrument(tracing::info_span!("redis-task-store:set")).await?;
+        let _ = conn
+          .hset(id.clone(), "task", task_state.clone())
+          .instrument(tracing::info_span!("redis-task-store:set"))
+          .await?;
         Ok(task_state)
       }
       Err(error) => {
@@ -145,7 +152,11 @@ impl super::TaskStore for RedisTaskStore {
     }
   }
 
-  async fn complete<C: Context,T: Performable<C>, R: TaskResult>(&self, id: String, result: R) -> Result<TaskState<C,T, R>, Error> {
+  async fn complete<C: Context, T: Performable<C>, R: TaskResult>(
+    &self,
+    id: String,
+    result: R,
+  ) -> Result<TaskState<C, T, R>, Error> {
     let mut conn = self.client.get_async_connection().await?;
 
     match Self::get_task_state(id.clone(), &mut conn).await {
@@ -155,7 +166,8 @@ impl super::TaskStore for RedisTaskStore {
         task_state.state = State::Terminated;
         task_state.exit_code = 0;
 
-        let q: String = conn.hget(id.clone(), "queue")
+        let q: String = conn
+          .hget(id.clone(), "queue")
           .instrument(tracing::info_span!("redis-task-store:hget"))
           .await?;
 
@@ -164,7 +176,8 @@ impl super::TaskStore for RedisTaskStore {
           .hdel(id.clone(), "queue")
           .lrem(format!("tasks-{}-running", q), 1, id.clone())
           .query_async(&mut conn)
-          .instrument(tracing::info_span!("redis-task-store:complete")).await?;
+          .instrument(tracing::info_span!("redis-task-store:complete"))
+          .await?;
 
         Ok(task_state)
       }
@@ -175,7 +188,12 @@ impl super::TaskStore for RedisTaskStore {
     }
   }
 
-  async fn fail<C: Context,T: Performable<C>, R: TaskResult>(&self, id: String, code: i32, msg: String) -> Result<TaskState<C,T, R>, Error> {
+  async fn fail<C: Context, T: Performable<C>, R: TaskResult>(
+    &self,
+    id: String,
+    code: i32,
+    msg: String,
+  ) -> Result<TaskState<C, T, R>, Error> {
     let mut conn = self.client.get_async_connection().await?;
 
     match Self::get_task_state(id.clone(), &mut conn).await {
@@ -186,7 +204,8 @@ impl super::TaskStore for RedisTaskStore {
         task_state.message = msg;
         task_state.state = State::Terminated;
 
-        let q: String = conn.hget(id.clone(), "queue")
+        let q: String = conn
+          .hget(id.clone(), "queue")
           .instrument(tracing::info_span!("redis-task-store:hget"))
           .await?;
 
@@ -195,7 +214,8 @@ impl super::TaskStore for RedisTaskStore {
           .hdel(id.clone(), "queue")
           .lrem(format!("tasks-{}-running", q), 1, id.clone())
           .query_async(&mut conn)
-          .instrument(tracing::info_span!("redis-task-store:complete")).await?;
+          .instrument(tracing::info_span!("redis-task-store:complete"))
+          .await?;
 
         Ok(task_state)
       }
@@ -206,10 +226,14 @@ impl super::TaskStore for RedisTaskStore {
     }
   }
 
-  async fn enqueue<C: Context,T: Performable<C>, R: TaskResult>(&mut self, task: T, q: String) -> Result<TaskState<C,T, R>, Error> {
+  async fn enqueue<C: Context, T: Performable<C>, R: TaskResult>(
+    &mut self,
+    task: T,
+    q: String,
+  ) -> Result<TaskState<C, T, R>, Error> {
     let id = format!("tasks/{}", Uuid::new_v4());
     let mut conn = self.client.get_async_connection().await?;
-    let mut task_state: TaskState<C,T, R> = TaskState::new(id.clone(), task);
+    let mut task_state: TaskState<C, T, R> = TaskState::new(id.clone(), task);
     task_state.state = State::Waiting;
 
     let _ = redis::pipe()
@@ -217,16 +241,26 @@ impl super::TaskStore for RedisTaskStore {
       .hset(id.clone(), "queue", q.clone())
       .rpush(format!("tasks-{}-pending", q), id.clone())
       .query_async(&mut conn)
-      .instrument(tracing::info_span!("redis-task-store:enqueue")).await?;
+      .instrument(tracing::info_span!("redis-task-store:enqueue"))
+      .await?;
 
     Ok(task_state)
   }
 
-  async fn dequeue<C: Context,T: Performable<C>, R: TaskResult>(&mut self, q: String) -> Result<TaskState<C,T, R>, Error> {
+  async fn dequeue<C: Context, T: Performable<C>, R: TaskResult>(
+    &mut self,
+    q: String,
+  ) -> Result<TaskState<C, T, R>, Error> {
     let mut conn = self.client.get_async_connection().await?;
-    let task_id: String = conn.brpoplpush(format!("tasks-{}-pending", q), format!("tasks-{}-running", q), 1)
+    let maybe_task_id: Value = conn
+      .brpoplpush(format!("tasks-{}-pending", q), format!("tasks-{}-running", q), 1)
       .instrument(tracing::info_span!("redis-task-store:brpoplpush"))
       .await?;
+
+    let task_id = match &maybe_task_id {
+      Value::Nil => return Err(Error::NotFound),
+      _ => String::from_redis_value(&maybe_task_id),
+    }?;
 
     Self::get_task_state(task_id.clone(), &mut conn).await
   }
@@ -236,7 +270,8 @@ impl super::TaskStore for RedisTaskStore {
     let _ = redis::pipe()
       .del(id.clone())
       .query_async(&mut conn)
-      .instrument(tracing::info_span!("redis-task-store:del")).await?;
+      .instrument(tracing::info_span!("redis-task-store:del"))
+      .await?;
 
     Ok(())
   }
@@ -249,9 +284,7 @@ pub struct RedisWorkerStore {
 
 impl RedisWorkerStore {
   pub fn new(client: redis::Client) -> Self {
-    Self {
-      client
-    }
+    Self { client }
   }
 }
 
@@ -263,23 +296,28 @@ impl WorkerStore for RedisWorkerStore {
       .hset(format!("worker/{}", worker_id), "queue", queue.join(","))
       .hset(format!("worker/{}", worker_id), "heartbeat", Utc::now().timestamp())
       .query_async(&mut conn)
-      .instrument(tracing::info_span!("redis-worker-store:register")).await?;
+      .instrument(tracing::info_span!("redis-worker-store:register"))
+      .await?;
 
     Ok(())
   }
 
   async fn heartbeat(&mut self, worker_id: String) -> Result<(), Error> {
     let mut conn = self.client.get_async_connection().await?;
-    let _ = conn.hset(format!("worker/{}", worker_id), "heartbeat", Utc::now().timestamp())
-      .instrument(tracing::info_span!("redis-worker-store:heartbeat")).await?;
+    let _ = conn
+      .hset(format!("worker/{}", worker_id), "heartbeat", Utc::now().timestamp())
+      .instrument(tracing::info_span!("redis-worker-store:heartbeat"))
+      .await?;
 
     Ok(())
   }
 
   async fn unregister(&mut self, worker_id: String) -> Result<(), Error> {
     let mut conn = self.client.get_async_connection().await?;
-    let _ = conn.del(format!("worker/{}", worker_id))
-      .instrument(tracing::info_span!("redis-worker-store:unregister")).await?;
+    let _ = conn
+      .del(format!("worker/{}", worker_id))
+      .instrument(tracing::info_span!("redis-worker-store:unregister"))
+      .await?;
 
     Ok(())
   }
@@ -287,8 +325,8 @@ impl WorkerStore for RedisWorkerStore {
 
 #[cfg(test)]
 mod tests {
-  use crate::longrunning::{Context, State};
   use crate::longrunning::TaskStore;
+  use crate::longrunning::{Context, State};
 
   use super::*;
 
@@ -302,9 +340,7 @@ mod tests {
 
   impl Default for ShutdownTask {
     fn default() -> Self {
-      Self {
-        id: Uuid::new_v4().to_string()
-      }
+      Self { id: Uuid::new_v4().to_string() }
     }
   }
 
@@ -322,11 +358,15 @@ mod tests {
       "task-id"
     }
 
-    async fn failure<C: Context, T: Performable<C>, R: TaskResult>(&mut self, result: R, msg: String) -> Result<(), Error> {
+    async fn failure<T: Performable<Self>, R: TaskResult>(
+      &mut self,
+      result: R,
+      msg: String,
+    ) -> Result<(), Error> {
       Ok(())
     }
 
-    async fn success<C: Context, T: Performable<C>, R: TaskResult>(&mut self, result: R) -> Result<(), Error> {
+    async fn success<T: Performable<Self>, R: TaskResult>(&mut self, result: R) -> Result<(), Error> {
       Ok(())
     }
   }
@@ -336,9 +376,11 @@ mod tests {
     let client = redis::Client::open("redis://127.0.0.1/").unwrap();
     let store = RedisTaskStore::new(client);
 
-    let error: Result<TaskState<DefaultContext, ShutdownTask, serde_json::Value>, Error> = store.get(String::from("non_existing_id")).await;
+    let error: Result<TaskState<DefaultContext, ShutdownTask, serde_json::Value>, Error> =
+      store.get(String::from("non_existing_id")).await;
 
-    if let Some(Error::NotFound) = error.err() {} else {
+    if let Some(Error::NotFound) = error.err() {
+    } else {
       panic!("Should not be Found");
     }
   }
@@ -350,7 +392,10 @@ mod tests {
     let mut store = RedisTaskStore::new(client.clone());
     let task = ShutdownTask::default();
 
-    let task_state = store.enqueue::<DefaultContext, ShutdownTask, serde_json::Value>(task.clone(), queue.clone()).await.unwrap();
+    let task_state = store
+      .enqueue::<DefaultContext, ShutdownTask, serde_json::Value>(task.clone(), queue.clone())
+      .await
+      .unwrap();
     assert_eq!(task_state.result, None);
     assert_eq!(task_state.state, State::Waiting);
     assert_eq!(task_state.exit_code, -1);
@@ -361,7 +406,10 @@ mod tests {
 
     assert_eq!(queue, queued);
 
-    let task_state_deq = store.dequeue::<DefaultContext, ShutdownTask, serde_json::Value>(queue.clone()).await.unwrap();
+    let task_state_deq = store
+      .dequeue::<DefaultContext, ShutdownTask, serde_json::Value>(queue.clone())
+      .await
+      .unwrap();
     assert_eq!(task, task_state_deq.task);
   }
 
@@ -372,11 +420,17 @@ mod tests {
     let mut store = RedisTaskStore::new(client.clone());
     let task = ShutdownTask::default();
 
-    let task_state = store.enqueue::<DefaultContext, ShutdownTask, i32>(task.clone(), queue.clone()).await.unwrap();
+    let task_state = store
+      .enqueue::<DefaultContext, ShutdownTask, i32>(task.clone(), queue.clone())
+      .await
+      .unwrap();
     assert_eq!(task_state.result, None);
     assert_eq!(task_state.state, State::Waiting);
 
-    let _ = store.complete::<DefaultContext, ShutdownTask, i32>(task_state.id.clone(), 99).await.unwrap();
+    let _ = store
+      .complete::<DefaultContext, ShutdownTask, i32>(task_state.id.clone(), 99)
+      .await
+      .unwrap();
 
     let mut conn = client.get_async_connection().await.unwrap();
     let t: TaskState<DefaultContext, ShutdownTask, i32> = conn.hget(task_state.id, "task").await.unwrap();
@@ -393,11 +447,17 @@ mod tests {
     let mut store = RedisTaskStore::new(client.clone());
     let task = ShutdownTask::default();
 
-    let task_state = store.enqueue::<DefaultContext, ShutdownTask, i32>(task.clone(), queue.clone()).await.unwrap();
+    let task_state = store
+      .enqueue::<DefaultContext, ShutdownTask, i32>(task.clone(), queue.clone())
+      .await
+      .unwrap();
     assert_eq!(task_state.result, None);
     assert_eq!(task_state.state, State::Waiting);
 
-    let _ = store.fail::<DefaultContext, ShutdownTask, i32>(task_state.id.clone(), 99, "Failed".to_string()).await.unwrap();
+    let _ = store
+      .fail::<DefaultContext, ShutdownTask, i32>(task_state.id.clone(), 99, "Failed".to_string())
+      .await
+      .unwrap();
 
     let mut conn = client.get_async_connection().await.unwrap();
     let t: TaskState<DefaultContext, ShutdownTask, i32> = conn.hget(task_state.id, "task").await.unwrap();
