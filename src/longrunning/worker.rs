@@ -2,14 +2,25 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::thread::JoinHandle;
 use std::time::Duration;
 
 use futures::executor::block_on;
+pub use tokio::task::JoinError;
+use tokio::task::JoinHandle;
 use uuid::Uuid;
 
-use crate::longrunning::{Broker, Context, Error, Performable, State, TaskResult, TaskState, TaskStore, Worker, WorkerStore};
-use crate::longrunning::store::{RedisTaskStore, RedisWorkerStore};
+use crate::longrunning::Broker;
+use crate::longrunning::Context;
+use crate::longrunning::Error;
+use crate::longrunning::Performable;
+use crate::longrunning::State;
+use crate::longrunning::store::RedisTaskStore;
+use crate::longrunning::store::RedisWorkerStore;
+use crate::longrunning::TaskResult;
+use crate::longrunning::TaskState;
+use crate::longrunning::TaskStore;
+use crate::longrunning::Worker;
+use crate::longrunning::WorkerStore;
 
 #[derive(Debug, Clone)]
 pub struct DefaultContext {
@@ -44,6 +55,7 @@ pub struct DefaultWorker<C, T, R, P>
   task_store: RedisTaskStore,
   worker_store: RedisWorkerStore,
   handle: Option<JoinHandle<()>>,
+  heartbeat: Option<JoinHandle<()>>,
   running: Arc<AtomicBool>,
   ctx_provider: Arc<P>,
   _phantom1: PhantomData<T>,
@@ -84,6 +96,7 @@ impl<C, T, R, P> DefaultWorker<C, T, R, P>
       worker_store,
       worker_id: format!("workers/{}", Uuid::new_v4()),
       handle: None,
+      heartbeat: None,
       running: Arc::new(AtomicBool::new(false)),
       _phantom1: PhantomData,
       _phantom2: PhantomData,
@@ -96,9 +109,15 @@ impl<C, T, R, P> DefaultWorker<C, T, R, P>
       match task_store.dequeue::<C, T, R>(queue.clone()).await {
         Ok(t) => {
           let task = t.task;
+          let task_id = t.id.clone();
+          let provider = ctx_provider.clone();
+          let task = tokio::spawn(async move {
+            let context = provider.get(task_id);
+            task.perform(context).await
+          });
+
           let task_id = t.id;
-          let context = ctx_provider.get(task_id.clone());
-          match task.perform(context).await {
+          match task.await {
             Ok(_) => tracing::info!(message = "Task execution succeeded", % task_id),
             Err(error) => {
               tracing::error!(message = "Task execution failed", %task_id, % error);
@@ -108,7 +127,7 @@ impl<C, T, R, P> DefaultWorker<C, T, R, P>
         }
         Err(error) => {
           tracing::error!(message = "Dequeue task failed", %error);
-          std::thread::sleep(Duration::from_millis(1000));
+          tokio::time::sleep(Duration::from_millis(1000)).await;
         }
       }
     }
@@ -135,8 +154,9 @@ impl super::Context for DefaultContext {
   }
 }
 
+#[async_trait::async_trait]
 impl<C: Context, T: Performable<C>, R: TaskResult, P: 'static + ContextProvider<C>> super::Worker for DefaultWorker<C, T, R, P> {
-  fn start(&mut self) -> Result<(), Error> {
+  async fn start(&mut self) -> Result<(), Error> {
     let worker_id = self.worker_id.clone();
     let queue = self.queue.clone();
     let task_store = self.task_store.clone();
@@ -144,30 +164,39 @@ impl<C: Context, T: Performable<C>, R: TaskResult, P: 'static + ContextProvider<
     let ctx_provider = self.ctx_provider.clone();
     tracing::debug!(message = "Starting worker", %worker_id, %queue);
 
-    block_on(self.worker_store.register(worker_id.clone(), vec![queue.clone()]))?;
-    let handle = std::thread::spawn(move || block_on(Self::run(queue, task_store, token, ctx_provider)));
+    let handle = tokio::spawn(async move {
+      Self::run(queue, task_store, token, ctx_provider).await
+    });
 
+    let queue = self.queue.clone();
+    let worker_id = self.worker_id.clone();
+    let mut worker_store = self.worker_store.clone();
+    let heartbeat = tokio::spawn(async move {
+      let queues = vec![queue];
+
+      loop {
+        let _ = worker_store.register(worker_id.clone(), queues.clone()).await;
+        let _ = tokio::time::sleep(Duration::from_millis(1000)).await;
+      }
+    });
+
+    let worker_id = self.worker_id.clone();
     self.handle = Some(handle);
+    self.heartbeat = Some(heartbeat);
     self.running.swap(true, Ordering::SeqCst);
     tracing::info!(message = "Started worker", %worker_id);
     Ok(())
   }
 
-  fn stop(&mut self) -> Result<(), Error> {
+  async fn stop(&mut self) -> Result<(), Error> {
     self.running.swap(false, Ordering::SeqCst);
     Ok(())
   }
 
-  fn join(&mut self) -> Result<(), Error> {
+  async fn join(&mut self) -> Result<(), Error> {
     match self.handle.take() {
-      Some(h) => h.join().map(|_| {
-        self.running.swap(false, Ordering::SeqCst);
-      }).map_err(|error| {
-        let error = Error::BoxError(error);
-        tracing::error!(message = "Thread join failed", %error);
-        error
-      }),
-      None => Err(Error::InvalidRequest("Worker not running")),
+      None => Ok(()),
+      Some(h) => h.await.map_err(|error| error.into())
     }
   }
 }
@@ -177,8 +206,8 @@ impl<C: Context, T: Performable<C>, R: TaskResult, P: ContextProvider<C>> Drop f
     let worker_id = self.worker_id.clone();
     tracing::info!(message = "Unregistering worker", %worker_id);
 
-    let _ = block_on(self.worker_store.unregister(worker_id));
     let _ = self.stop();
+    let _ = block_on(self.worker_store.unregister(worker_id));
   }
 }
 

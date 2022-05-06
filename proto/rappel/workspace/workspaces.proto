@@ -79,6 +79,8 @@ message Workspace {
 
   WorkspaceStatus status = 7;
 
+  string execution_url = 10;
+
   map<string,string> labels = 15;
 
   rappel.process.ExitStatus last_status = 16;

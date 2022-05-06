@@ -10,6 +10,7 @@ use prost_types::Timestamp;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde::Serialize;
+use tokio::task::JoinError;
 
 use crate::proto::longrunning::Operation;
 
@@ -30,8 +31,8 @@ pub enum Error {
   #[error("{0}")]
   InvalidRequest(&'static str),
 
-  #[error("Box Error (probably from thread)")]
-  BoxError(Box<dyn Any + Send + 'static>),
+  #[error("Join Error")]
+  JoinError(#[from] JoinError),
 
   #[error("not found")]
   NotFound,
@@ -137,10 +138,11 @@ pub trait Broker<C: Context, T: Performable<C>, R: TaskResult> {
   async fn cancel(&mut self, id: String) -> Result<TaskState<C, T, R>, Error>;
 }
 
+#[async_trait::async_trait]
 pub trait Worker {
-  fn start(&mut self) -> Result<(), Error>;
-  fn stop(&mut self) -> Result<(), Error>;
-  fn join(&mut self) -> Result<(), Error>;
+  async fn start(&mut self) -> Result<(), Error>;
+  async fn stop(&mut self) -> Result<(), Error>;
+  async fn join(&mut self) -> Result<(), Error>;
 }
 
 #[async_trait::async_trait]
