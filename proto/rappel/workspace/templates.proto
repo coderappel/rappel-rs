@@ -50,6 +50,8 @@ message Template {
 
   string owner = 3;
 
+  string location = 4;
+
   string display_name = 5;
 
   TemplateStatus status = 7;
