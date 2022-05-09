@@ -80,13 +80,13 @@ message Workspace {
   WorkspaceStatus status = 7;
 
   map<string,string> labels = 10;
-  
+
   map<string, string> resources = 12;
 
   map<string, string> execution_info = 13;
 
   map<string, string> pending_operation = 14;
-  
+
   rappel.process.ExitStatus last_exit_status = 15;
 
   google.protobuf.Timestamp creation_ts = 20;
@@ -102,6 +102,13 @@ message CreateWorkspaceRequest {
   rappel.workspace.Template template = 1;
 
   int64 template_instance_id = 2;
+
+  string display_name = 3;
+
+  // the field is currently unused
+  string owner = 4;
+
+  map<string,string> labels = 5;
 }
 
 message ListWorkspaceRequest {
