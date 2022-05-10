@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package rappel.accounts;
+
+import "google/api/annotations.proto";
+
+service Organizations {
+  rpc Create(CreateOrganizationRequest) returns (Organization) {
+    option (google.api.http) = {
+      post: "/api/v1/organizations",
+      body: "*"
+    };
+  }
+
+  rpc Get(GetOrganizationRequest) returns (Organization) {
+    option (google.api.http) = {
+      get: "/api/v1/organizations/{organization_id}"
+    };
+  }
+
+  rpc List(ListOrganizationRequest) returns (ListOrganizationResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/organizations"
+    };
+  }
+}
+
+message Organization {
+  int64 organization_id = 1;
+
+  string display_name = 2;
+}
+
+message CreateOrganizationRequest {
+  Organization organization = 1;
+}
+
+message GetOrganizationRequest {
+  int64 organization_id = 1;
+}
+
+message ListOrganizationRequest {
+}
+
+message ListOrganizationResponse {
+  repeated Organization organization = 1;
+}

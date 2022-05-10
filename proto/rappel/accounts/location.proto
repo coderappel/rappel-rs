@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package rappel.accounts;
+
+import "google/api/annotations.proto";
+
+service Locations {
+  rpc Get(GetLocationRequest) returns (Location) {
+    option (google.api.http) = {
+      get: "/api/v1/locations/{name}"
+    };
+  }
+
+  rpc List(ListLocationRequest) returns (ListLocationResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/locations"
+    };
+  }
+}
+
+message Location {
+  int64 location_id = 1;
+
+  string name = 2;
+
+  string display_name = 3;
+
+  string provider = 4;
+
+  string region = 5;
+
+  string zone = 6;
+}
+
+message GetLocationRequest {
+  string name = 1;
+}
+
+message ListLocationRequest {
+}
+
+message ListLocationResponse {
+  repeated Location locations = 1;
+}
