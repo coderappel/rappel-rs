@@ -4,17 +4,17 @@ pub mod identifier;
 mod types;
 mod worker;
 
+use std::time::Duration;
 pub use types::*;
 pub use worker::*;
 pub use store::RedisTaskStore;
 pub use store::RedisWorkerStore;
 
-use tonic::transport::Channel;
 use crate::proto::longrunning::Operation;
 use crate::proto::longrunning::GetOperationRequest;
-use crate::proto::longrunning::operations_client::OperationsClient;
+use crate::service::OperationsSvcClient;
 
-pub async fn wait(mut client: OperationsClient<Channel>, operation_id: &str) -> Result<Operation, tonic::Status> {
+pub async fn wait(client: &mut OperationsSvcClient, operation_id: &str) -> Result<Operation, tonic::Status> {
   let id = operation_id.to_string();
   loop {
     let operation_id = id.clone();
@@ -33,5 +33,6 @@ pub async fn wait(mut client: OperationsClient<Channel>, operation_id: &str) -> 
         return Err(error);
       }
     }
+    let _ = tokio::time::sleep(Duration::from_millis(1000)).await;
   }
 }

@@ -249,7 +249,7 @@ impl<C: Context, T: Performable<C>, R: TaskResult> Broker<C, T, R> for DefaultBr
       }
       Ok(_) => {
         tracing::debug!(message = "Cannot cancel a running task", %id);
-        Err(Error::InvalidRequest("Already running"))
+        Err(Error::Internal("Already running".to_string()))
       }
       Err(error) => {
         tracing::debug!(message = "Get task failed", %id, %error);

@@ -15,5 +15,7 @@ pub struct ServiceConf {
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
   pub cluster: ServiceConf,
+  pub longrunning: ServiceConf,
+  pub system: ServiceConf,
   pub version: i64,
 }

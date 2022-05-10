@@ -13,13 +13,11 @@ message Operation {
 
   map<string, string> metadata = 2;
 
-  bool done = 3;
+  bool done = 10;
 
-  oneof result {
-    google.rpc.Status error = 4;
+  google.rpc.Status error = 11;
 
-    google.protobuf.Any response = 5;
-  }
+  map<string, string> response = 12;
 
   google.protobuf.Timestamp creation_ts = 20;
 

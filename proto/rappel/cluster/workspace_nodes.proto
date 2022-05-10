@@ -1,11 +1,10 @@
 syntax = "proto3";
 
-package cluster;
+package rappel.cluster;
 
 import "google/protobuf/timestamp.proto";
 import "longrunning/operations.proto";
-import "app/workspace.proto";
-import "app/resource.proto";
+import "rappel/workspace/workspaces.proto";
 
 message Port {
   string name = 1;
@@ -86,14 +85,7 @@ service WorkspaceNodes {
 }
 
 message CreateWorkspaceNodeRequest {
-  app.workspace.Workspace workspace = 1;
-  
-
-  app.resource.ResourceBundle resource_bundle = 5;
-
-  app.resource.DiskType disk_type = 6;
-
-  app.resource.DiskImage disk_image = 7;
+  rappel.workspace.Workspace workspace = 1;
 
   map<string, string> labels = 10;
 }

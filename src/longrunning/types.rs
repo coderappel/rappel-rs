@@ -25,11 +25,17 @@ pub enum Error {
   #[error("Serialization failed")]
   ProstEncodeError(#[from] prost::EncodeError),
 
-  #[error("Internal Error")]
-  Internal(#[from] anyhow::Error),
+  #[error(transparent)]
+  Other(#[from] anyhow::Error),
+
+  #[error("Failed to select cluster {0}")]
+  GrpcError(#[from] tonic::Status),
+
+  #[error(transparent)]
+  SqlxError(#[from] sqlx::Error),
 
   #[error("{0}")]
-  InvalidRequest(&'static str),
+  Internal(String),
 
   #[error("Join Error")]
   JoinError(#[from] JoinError),
@@ -82,7 +88,7 @@ impl<T: Debug + Clone + Send + Sync + Serialize + DeserializeOwned + Any> TaskRe
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskState<C,T,R> {
+pub struct TaskState<C, T, R> {
   pub id: String,
   pub task: T,
   pub result: Option<R>,
@@ -176,7 +182,8 @@ impl<C: Context, T: Serialize, R> Into<Operation> for TaskState<C, T, R> {
         seconds: ts.timestamp(),
         nanos: ts.nanosecond() as i32,
       }),
-      result: None,
+      error: None,
+      response: HashMap::default(),
     }
   }
 }

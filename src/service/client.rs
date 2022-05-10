@@ -13,11 +13,11 @@ impl <T: Clone> ShardedClient<T> {
     let name = config.name;
     let mut clients = Vec::default();
 
-    tracing::trace!(message = "Initializing ShardedClient", %name);
+    tracing::debug!(message = "Initializing ShardedClient", %name);
 
     for instance in config.instances {
       let address = instance.address.clone();
-      let channel = tonic::transport::Channel::from_shared(address)?.connect().await?;
+      let channel = tonic::transport::Channel::from_shared(address)?.connect_lazy();
       clients.push(builder(channel));
     }
 
@@ -29,10 +29,10 @@ impl <T: Clone> ShardedClient<T> {
   }
 
   pub fn borrow(&self, key: &str) -> Result<&T, super::Error> {
-    self.clients.get(0).ok_or(super::Error::MissingClient(key.to_string()))
+    self.clients.get(0).ok_or_else(|| super::Error::MissingClient(key.to_string()))
   }
 
   pub fn borrow_mut(&mut self, key: &str) -> Result<&mut T, super::Error> {
-    self.clients.get_mut(0).ok_or(super::Error::MissingClient(key.to_string()))
+    self.clients.get_mut(0).ok_or_else(|| super::Error::MissingClient(key.to_string()))
   }
 }

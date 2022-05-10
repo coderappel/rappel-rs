@@ -4,11 +4,11 @@ fn main() {
     .file_descriptor_set_path("./devbox.pb")
     .compile(
       &[
-        "proto/cluster/clusters.proto",
-        "proto/cluster/workspace_nodes.proto",
-        "proto/app/workspace.proto",
-        "proto/app/resource.proto",
-        "proto/app/session.proto",
+        "proto/rappel/system/clusters.proto",
+        "proto/rappel/system/location.proto",
+        "proto/rappel/cluster/workspace_nodes.proto",
+        "proto/rappel/account/billing.proto",
+        "proto/rappel/account/organization.proto",
         "proto/rappel/workspace/ides.proto",
         "proto/rappel/workspace/workspaces.proto",
         "proto/rappel/process/processes.proto",

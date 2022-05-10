@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package rappel.accounts;
+package rappel.system;
 
 import "google/api/annotations.proto";
 
