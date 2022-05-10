@@ -79,6 +79,8 @@ message Workspace {
 
   WorkspaceStatus status = 7;
 
+  int64 billing_account_id = 9;
+
   map<string,string> labels = 10;
 
   map<string, string> resources = 12;
