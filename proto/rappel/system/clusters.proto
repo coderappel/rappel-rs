@@ -34,7 +34,7 @@ service Clusters {
     };
   }
 
-  rpc Startup(ShutdownClusterRequest) returns (google.protobuf.Empty) {
+  rpc Startup(StartClusterRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/api/v1/clusters/{cluster_id}/method:startup"
     };
@@ -99,6 +99,10 @@ message UpdateClusterRequest {
 }
 
 message GetClusterRequest {
+  string cluster_id = 1;
+}
+
+message StartClusterRequest {
   string cluster_id = 1;
 }
 
