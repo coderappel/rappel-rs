@@ -81,7 +81,11 @@ service WorkspaceNodes {
 
   rpc List(ListWorkspaceNodeRequest) returns (ListWorkspaceNodeResponse);
 
-  rpc Delete(DeleteWorkspaceNodeRequest) returns (longrunning.Operation);
+  rpc Start(StartWorkspaceRequest) returns (longrunning.Operation);
+
+  rpc Stop(StopWorkspaceRequest) returns (longrunning.Operation);
+
+  rpc Delete(DeleteWorkspaceRequest) returns (longrunning.Operation);
 }
 
 message CreateWorkspaceNodeRequest {
@@ -91,11 +95,11 @@ message CreateWorkspaceNodeRequest {
 }
 
 message GetWorkspaceNodeRequest {
-  string node_id = 1;
+  rappel.workspace.Workspace workspace = 1;
 }
 
-message DeleteWorkspaceNodeRequest {
-  string node_id = 1;
+message DeleteWorkspaceRequest {
+  rappel.workspace.Workspace workspace = 1;
 }
 
 message ListWorkspaceNodeRequest {
@@ -108,4 +112,12 @@ message ListWorkspaceNodeResponse {
   repeated WorkspaceNode workspace_node = 1;
 
   string next_page_token = 5;
+}
+
+message StartWorkspaceRequest {
+  rappel.workspace.Workspace workspace = 1;
+}
+
+message StopWorkspaceRequest {
+  rappel.workspace.Workspace workspace = 1;
 }
