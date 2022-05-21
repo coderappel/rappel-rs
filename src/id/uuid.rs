@@ -1,11 +1,11 @@
+use crate::id::UidGenerator;
 use core::marker::PhantomData;
 use uuid::Uuid;
-use crate::id::UidGenerator;
 
 /// UUID V4 generator
 #[derive(Debug, Clone)]
 pub struct UuidGenerator {
-  _guard: PhantomData<i32>
+  _guard: PhantomData<i32>,
 }
 
 impl UuidGenerator {

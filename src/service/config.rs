@@ -3,7 +3,7 @@ use serde_derive::Deserialize;
 #[derive(Clone, Debug, Deserialize)]
 pub struct ServiceInstance {
   pub address: String,
-  pub shard_ranges: Vec<(String, String)>  
+  pub shard_ranges: Vec<(String, String)>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

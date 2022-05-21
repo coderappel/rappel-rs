@@ -1,10 +1,10 @@
-use std::collections::HashMap;
+use crate::prost::ProstTimestamp;
 use crate::proto::cluster::NodePhase;
 use crate::proto::cluster::NodeStatus;
 use crate::proto::cluster::WorkspaceNode;
-use crate::prost::ProstTimestamp;
-use kube::ResourceExt;
 use k8s_openapi::api::core::v1::Pod;
+use kube::ResourceExt;
+use std::collections::HashMap;
 
 pub trait PodExt {
   fn into_workspace_node(&self) -> WorkspaceNode;
@@ -53,7 +53,8 @@ impl PodExt for Pod {
       NodePhase::Terminated
     } else {
       NodePhase::Unknown
-    }.into();
+    }
+    .into();
 
     if let Some(status) = &self.status {
       if let Some(ts) = &status.start_time {
@@ -71,7 +72,11 @@ impl PodExt for Pod {
 
       if self.is_failed() || self.is_succeeded() {
         if let Some(s) = &status.container_statuses {
-          node_status.exit_code = s.iter().map(|c| c.state.clone().unwrap().terminated.unwrap().exit_code).max().unwrap()
+          node_status.exit_code = s
+            .iter()
+            .map(|c| c.state.clone().unwrap().terminated.unwrap().exit_code)
+            .max()
+            .unwrap()
         }
       }
     }

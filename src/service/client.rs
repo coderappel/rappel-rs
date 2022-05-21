@@ -8,8 +8,11 @@ pub struct ShardedClient<T: Clone> {
   clients: Vec<T>,
 }
 
-impl <T: Clone> ShardedClient<T> {
-  pub(crate) async fn try_new<F: Fn(Channel) -> T>(config: ServiceConf, builder: F) -> Result<Self, super::Error> {
+impl<T: Clone> ShardedClient<T> {
+  pub(crate) async fn try_new<F: Fn(Channel) -> T>(
+    config: ServiceConf,
+    builder: F,
+  ) -> Result<Self, super::Error> {
     let name = config.name;
     let mut clients = Vec::default();
 
@@ -29,10 +32,16 @@ impl <T: Clone> ShardedClient<T> {
   }
 
   pub fn borrow(&self, key: &str) -> Result<&T, super::Error> {
-    self.clients.get(0).ok_or_else(|| super::Error::MissingClient(key.to_string()))
+    self
+      .clients
+      .get(0)
+      .ok_or_else(|| super::Error::MissingClient(key.to_string()))
   }
 
   pub fn borrow_mut(&mut self, key: &str) -> Result<&mut T, super::Error> {
-    self.clients.get_mut(0).ok_or_else(|| super::Error::MissingClient(key.to_string()))
+    self
+      .clients
+      .get_mut(0)
+      .ok_or_else(|| super::Error::MissingClient(key.to_string()))
   }
 }

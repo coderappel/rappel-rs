@@ -26,22 +26,21 @@ impl ServiceLocator {
     let config: super::config::Config = conf.try_deserialize()?;
 
     Ok(ServiceLocator {
-      clusters: ShardedClient::try_new(
-        config.system,
-        ClustersClient::new).await?,
-      operations: ShardedClient::try_new(
-        config.longrunning,
-        OperationsClient::new).await?,
-      workspace_nodes: ShardedClient::try_new(
-        config.cluster,
-        WorkspaceNodesClient::new).await?,
+      clusters: ShardedClient::try_new(config.system, ClustersClient::new).await?,
+      operations: ShardedClient::try_new(config.longrunning, OperationsClient::new).await?,
+      workspace_nodes: ShardedClient::try_new(config.cluster, WorkspaceNodesClient::new).await?,
     })
   }
 
-  pub async fn get_client(&self, svc: &str) -> Result<ShardedClient<WorkspaceNodesSvcClient>, super::Error> {
+  pub async fn get_client(
+    &self,
+    svc: &str,
+  ) -> Result<ShardedClient<WorkspaceNodesSvcClient>, super::Error> {
     match svc {
       "cluster.WorkspaceNodes" => Ok(self.workspace_nodes.clone()),
-      _ => Err(super::Error::MissingClient(ERROR_MISSING_SERVICE.to_string())),
+      _ => Err(super::Error::MissingClient(
+        ERROR_MISSING_SERVICE.to_string(),
+      )),
     }
   }
 
@@ -49,11 +48,15 @@ impl ServiceLocator {
     Ok(self.clusters.clone())
   }
 
-  pub async fn get_operations_client(&self) -> Result<ShardedClient<OperationsSvcClient>, super::Error> {
+  pub async fn get_operations_client(
+    &self,
+  ) -> Result<ShardedClient<OperationsSvcClient>, super::Error> {
     Ok(self.operations.clone())
   }
 
-  pub async fn get_workspace_nodes_client(&self) -> Result<ShardedClient<WorkspaceNodesSvcClient>, super::Error> {
+  pub async fn get_workspace_nodes_client(
+    &self,
+  ) -> Result<ShardedClient<WorkspaceNodesSvcClient>, super::Error> {
     Ok(self.workspace_nodes.clone())
   }
 }
