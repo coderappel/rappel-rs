@@ -21,7 +21,7 @@ serde = "1"
 serde_derive = "1"
 serde_json = "1"
 
-config = "0.12"
+config = "0.13"
 
 tokio = { version = "1", features = ["full"] }
 
@@ -29,18 +29,18 @@ chrono = "0.4"
 
 redis = { version = "0.21.5", features = ["tokio-comp", "r2d2", "connection-manager"] }
 sqlx = { version = "0.5", default_features = false, features = ["runtime-tokio-rustls"] }
-uuid = { version = "0.8", features = ["serde", "v4"] }
+uuid = { version = "1", features = ["serde", "v4"] }
 
-kube = { version = "0.70.0", features = ["client"] }
+kube = { version = "0.72.0", features = ["client"] }
 k8s-openapi = { version = "0.14.0", features = ["v1_22"] }
 
 # Service Deps
-prost = "0.9"
-prost-derive = "0.9"
-prost-types = "0.9"
-protobuf = "2"
-tonic = { version = "0.6", features = ["default", "tls"] }
-tonic-health = "0.5"
+prost = "0.10"
+prost-derive = "0.10"
+prost-types = "0.10"
+protobuf = "3"
+tonic = { version = "0.7", features = ["default", "tls"] }
+tonic-health = "0.6"
 
 # Observability
 tracing = "0.1"
@@ -50,4 +50,4 @@ tracing-log = "0.1"
 smallvec = "1"
 
 [build-dependencies]
-tonic-build = "0.6"
+tonic-build = "0.7"
