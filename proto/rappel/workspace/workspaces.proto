@@ -101,9 +101,11 @@ message Workspace {
 }
 
 message CreateWorkspaceRequest {
-  rappel.workspace.Template template = 1;
+  oneof source_template {
+    int64 template_instance_id = 1;
 
-  int64 template_instance_id = 2;
+    rappel.workspace.Template new_template = 2;
+  }
 
   string display_name = 3;
 
