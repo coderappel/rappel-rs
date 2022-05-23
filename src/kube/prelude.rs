@@ -1,7 +1,7 @@
-use crate::prost::ProstTimestamp;
 use crate::proto::cluster::NodePhase;
 use crate::proto::cluster::NodeStatus;
 use crate::proto::cluster::WorkspaceNode;
+use crate::proto::prelude::ProstTimestamp;
 use k8s_openapi::api::core::v1::Pod;
 use kube::ResourceExt;
 use std::collections::HashMap;

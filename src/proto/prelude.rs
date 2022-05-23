@@ -25,3 +25,9 @@ impl From<chrono::DateTime<chrono::Utc>> for ProstTimestamp {
     Self(Timestamp { nanos, seconds })
   }
 }
+
+impl From<()> for super::google::protobuf::Empty {
+  fn from(_: ()) -> Self {
+    Self::default()
+  }
+}

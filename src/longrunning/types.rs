@@ -65,13 +65,13 @@ pub trait Performer<P: Performable> {
 
   fn worker_id(&self) -> &str;
 
-  async fn perform(&mut self, task: P) -> Result<(), Self::Error>;
+  async fn perform(&mut self, task: P) -> Result<P::Output, Self::Error>;
 }
 
 pub trait TaskLoop {
-  fn start(&self);
+  fn start(&mut self);
 
   fn abort(&self);
 
-  fn await_termination(&self);
+  fn await_termination(&mut self);
 }
