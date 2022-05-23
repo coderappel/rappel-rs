@@ -1,14 +1,21 @@
+use prost::Message;
+
+use crate::proto::google::rpc::Status;
 use crate::proto::longrunning::Operation;
 
 #[async_trait::async_trait]
-pub trait Performable<S, C> {
+pub trait Performable {
   type Error;
 
-  async fn perform(&self, ctx: C) -> Result<S, Self::Error>;
+  type Context;
+
+  type Output: Message;
+
+  async fn perform(&self, ctx: Self::Context) -> Result<Self::Output, Self::Error>;
 }
 
 #[async_trait::async_trait]
-pub trait Broker<P> {
+pub trait Broker<P: Performable> {
   type Error;
 
   async fn enqueue(&self, task: P, ctx: &Context) -> Result<Operation, Self::Error>;
@@ -16,7 +23,7 @@ pub trait Broker<P> {
   async fn cancel(&self, id: &str, ctx: &Context) -> Result<Operation, Self::Error>;
 }
 
-pub trait Message<T> {
+pub trait Task<T> {
   fn ack_id(&self) -> &str;
 
   fn data(&self) -> &T;
@@ -39,9 +46,9 @@ impl Context {
 
 #[async_trait::async_trait]
 pub(crate) trait Queue {
-  type Item;
+  type Item: Performable;
 
-  type ReceivedItem: Message<Self::Item>;
+  type ReceivedItem: Task<Self::Item>;
 
   type Error;
 
@@ -53,11 +60,8 @@ pub(crate) trait Queue {
 }
 
 #[async_trait::async_trait]
-pub trait Performer<S, C, P>
-where
-  P: Performable<S, C>,
-{
-  type Error;
+pub trait Performer<P: Performable> {
+  type Error: Into<Status>;
 
   fn worker_id(&self) -> &str;
 

@@ -5,6 +5,10 @@ pub use self::rappel::system;
 pub use self::rappel::workspace;
 
 pub mod google {
+  pub mod protobuf {
+    tonic::include_proto!("google.protobuf");
+  }
+
   pub mod rpc {
     tonic::include_proto!("google.rpc");
   }

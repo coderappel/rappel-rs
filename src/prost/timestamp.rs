@@ -1,4 +1,4 @@
-pub use prost_types::Timestamp;
+pub use crate::proto::google::protobuf::Timestamp;
 use std::ops::Deref;
 
 #[derive(Clone, Debug)]
@@ -22,6 +22,6 @@ impl From<chrono::DateTime<chrono::Utc>> for ProstTimestamp {
   fn from(timestamp: chrono::DateTime<chrono::Utc>) -> Self {
     let seconds = timestamp.timestamp();
     let nanos = timestamp.timestamp_subsec_nanos() as i32;
-    Self(prost_types::Timestamp { nanos, seconds })
+    Self(Timestamp { nanos, seconds })
   }
 }

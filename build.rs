@@ -1,6 +1,7 @@
 fn main() {
   tonic_build::configure()
     .build_server(true)
+    .compile_well_known_types(true)
     .file_descriptor_set_path("./devbox.pb")
     .compile(
       &[
@@ -12,6 +13,7 @@ fn main() {
         "proto/rappel/workspace/ides.proto",
         "proto/rappel/workspace/workspaces.proto",
         "proto/rappel/process/processes.proto",
+        "proto/google/protobuf/any.proto",
       ],
       &["proto"],
     )
@@ -20,6 +22,7 @@ fn main() {
   println!("cargo:rerun-if-changed=Cargo.toml");
   println!("cargo:rerun-if-changed=migrations");
   println!("cargo:rerun-if-changed=build.rs");
+  println!("cargo:rerun-if-changed=proto/google/protobuf/any.proto");
   println!("cargo:rerun-if-changed=proto/cluster/workspace_nodes.proto");
   println!("cargo:rerun-if-changed=proto/rappel/workspace/ides.proto");
   println!("cargo:rerun-if-changed=proto/rappel/workspace/workspaces.proto");

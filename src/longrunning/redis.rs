@@ -14,6 +14,7 @@ use crate::proto::longrunning::Operation;
 
 use super::Broker;
 use super::Context;
+use super::Performable;
 use super::Queue;
 
 #[derive(Debug, thiserror::Error)]
@@ -23,13 +24,13 @@ pub enum BrokerError {
 }
 
 #[derive(Clone, Debug)]
-pub struct RedisBroker<T: Serialize + DeserializeOwned> {
+pub struct RedisBroker<T: Serialize + DeserializeOwned + Performable> {
   _client: redis::Client,
   queue: RedisQueue<T, JsonCodec<T, T>>,
   _phantom: PhantomData<T>,
 }
 
-impl<T: Send + Sync + Serialize + DeserializeOwned> RedisBroker<T> {
+impl<T: Send + Sync + Serialize + DeserializeOwned + Performable> RedisBroker<T> {
   pub fn new(client: redis::Client, queue_name: String) -> Self {
     Self {
       _client: client.clone(),
@@ -40,7 +41,10 @@ impl<T: Send + Sync + Serialize + DeserializeOwned> RedisBroker<T> {
 }
 
 #[async_trait::async_trait]
-impl<T: Send + Sync + Serialize + DeserializeOwned> Broker<T> for RedisBroker<T> {
+impl<T: Performable> Broker<T> for RedisBroker<T>
+where
+  T: Send + Sync + Serialize + DeserializeOwned,
+{
   type Error = BrokerError;
 
   async fn enqueue(&self, task: T, ctx: &Context) -> Result<Operation, Self::Error> {
@@ -85,7 +89,7 @@ pub enum RedisQueueError {
   Redis(#[from] redis::RedisError),
 }
 
-impl<T> super::Message<T> for RedisMessage<T> {
+impl<T> super::Task<T> for RedisMessage<T> {
   fn ack_id(&self) -> &str {
     &self.ack_id
   }
@@ -95,7 +99,7 @@ impl<T> super::Message<T> for RedisMessage<T> {
   }
 }
 
-impl<T, C: Codec> RedisQueue<T, C> {
+impl<T: Performable, C: Codec> RedisQueue<T, C> {
   pub fn new(client: redis::Client, queue: String, codec: C) -> Self {
     Self {
       client,
@@ -107,7 +111,7 @@ impl<T, C: Codec> RedisQueue<T, C> {
 }
 
 #[async_trait::async_trait]
-impl<T: Send + Sync + Serialize + DeserializeOwned> super::Queue
+impl<T: Send + Sync + Serialize + DeserializeOwned + Performable> super::Queue
   for RedisQueue<T, JsonCodec<T, T>>
 {
   type Item = T;
@@ -167,13 +171,24 @@ mod tests {
   use redis::AsyncCommands;
   use serde::Deserialize;
 
-  use crate::longrunning::Queue;
+  use crate::{longrunning::Queue, proto::google::protobuf::Empty};
 
   use super::*;
 
   #[derive(Serialize, Deserialize, Clone)]
   struct Task {
     item: i32,
+  }
+
+  #[async_trait::async_trait]
+  impl Performable for Task {
+    type Error = std::io::Error;
+    type Context = ();
+    type Output = Empty;
+
+    async fn perform(&self, _: Self::Context) -> Result<Self::Output, Self::Error> {
+      Ok(Empty::default())
+    }
   }
 
   #[tokio::test]

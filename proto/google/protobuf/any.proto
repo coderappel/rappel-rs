@@ -43,7 +43,7 @@ option objc_class_prefix = "GPB";
 // URL that describes the type of the serialized message.
 //
 // Protobuf library provides support to pack/unpack Any values in the form
-// of utility functions or additional generated methods of the Any type.
+// of utility functions or additional generated methods of the Any type
 //
 // Example 1: Pack and unpack a message in C++.
 //
