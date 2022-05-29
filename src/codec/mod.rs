@@ -4,7 +4,9 @@ pub trait EncoderWrite {
   fn write(&mut self, arg: &[u8]);
 }
 
-pub trait DecoderRead {}
+pub trait DecoderRead {
+  fn as_slice(&self) -> &[u8];
+}
 
 pub trait Encoder {
   type Item;
@@ -40,5 +42,17 @@ pub trait Codec {
 impl<T: bytes::BufMut> EncoderWrite for T {
   fn write(&mut self, arg: &[u8]) {
     self.put_slice(arg)
+  }
+}
+
+impl DecoderRead for Vec<u8> {
+  fn as_slice(&self) -> &[u8] {
+    self
+  }
+}
+
+impl DecoderRead for &str {
+  fn as_slice(&self) -> &[u8] {
+    self.as_bytes()
   }
 }

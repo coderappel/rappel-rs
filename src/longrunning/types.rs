@@ -32,15 +32,20 @@ pub trait Task<T> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Context {
   user_id: String,
+  system_id: String,
 }
 
 impl Context {
-  pub fn new(user_id: String) -> Self {
-    Self { user_id }
+  pub fn new(user_id: String, system_id: String) -> Self {
+    Self { user_id, system_id }
   }
 
   pub fn user_id(&self) -> &str {
     &self.user_id
+  }
+
+  pub fn system_id(&self) -> &str {
+    &self.system_id
   }
 }
 
@@ -54,9 +59,9 @@ pub(crate) trait Queue {
 
   async fn offer(&self, item: Self::Item, ctx: &Context) -> Result<String, Self::Error>;
 
-  async fn pull(&self) -> Result<Option<Self::ReceivedItem>, Self::Error>;
+  async fn pull(&self, ctx: &Context) -> Result<Option<Self::ReceivedItem>, Self::Error>;
 
-  async fn ack(&self, ack_id: &str) -> Result<(), Self::Error>;
+  async fn ack(&self, ack_id: &str, ctx: &Context) -> Result<(), Self::Error>;
 }
 
 #[async_trait::async_trait]

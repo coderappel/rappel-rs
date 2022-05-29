@@ -43,8 +43,9 @@ impl<U: DeserializeOwned> Decoder for SerdeJsonDecoder<U> {
 
   type Error = Error;
 
-  fn decode<T: DecoderRead>(&mut self, _buf: &mut T) -> Result<Option<Self::Item>, Self::Error> {
-    todo!()
+  fn decode<T: DecoderRead>(&mut self, buf: &mut T) -> Result<Option<Self::Item>, Self::Error> {
+    let res = serde_json::from_slice(buf.as_slice())?;
+    Ok(Some(res))
   }
 }
 

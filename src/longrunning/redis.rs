@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 
 use chrono::Utc;
+use redis::AsyncCommands;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use tracing_futures::Instrument;
@@ -9,6 +10,7 @@ use uuid::Uuid;
 
 use crate::codec::json::JsonCodec;
 use crate::codec::Codec;
+use crate::codec::Decoder;
 use crate::codec::Encoder;
 use crate::proto::longrunning::Operation;
 
@@ -87,6 +89,21 @@ pub struct RedisMessage<T> {
 pub enum RedisQueueError {
   #[error("Redis command failed: {0}")]
   Redis(#[from] redis::RedisError),
+
+  #[error("Failed at codec")]
+  CodecError(#[from] crate::codec::json::Error),
+
+  #[error("Invalid Task Type. Expected {0}, Found {1}")]
+  InvalidTaskType(String, String),
+
+  #[error("Internal: {0}")]
+  Internal(String),
+
+  #[error("NotFound: {0}")]
+  NotFound(String),
+
+  #[error("Unknown")]
+  Unknown(#[from] anyhow::Error),
 }
 
 impl<T> super::Task<T> for RedisMessage<T> {
@@ -154,12 +171,99 @@ impl<T: Send + Sync + Serialize + DeserializeOwned + Performable> super::Queue
     Ok(id)
   }
 
-  async fn pull(&self) -> Result<Option<Self::ReceivedItem>, Self::Error> {
-    todo!()
+  async fn pull(&self, ctx: &Context) -> Result<Option<Self::ReceivedItem>, Self::Error> {
+    let mut conn = self.client.get_async_connection().await?;
+
+    let maybe_id: Option<String> = redis::cmd("LMOVE")
+      .arg(format!("queue:{}", self.queue))
+      .arg(format!("queue:ack:{}", self.queue))
+      .arg("RIGHT")
+      .arg("LEFT")
+      .query_async(&mut conn)
+      .instrument(tracing::info_span!("redis-queue-pull-lmove"))
+      .await?;
+
+    let op_id = match maybe_id {
+      None => return Err(Self::Error::NotFound("Empty Queue".to_string())),
+      Some(id) => id,
+    };
+
+    let (op,): (HashMap<String, String>,) = redis::pipe()
+      .atomic()
+      .hset_multiple(
+        format!("operation:{}", op_id),
+        &[
+          ("dequeue_system_id", ctx.system_id()),
+          ("dequeue_ts", &Utc::now().timestamp_nanos().to_string()),
+          ("dequeue_user_id", ctx.user_id()),
+        ],
+      )
+      .ignore()
+      .hgetall(format!("operation:{}", op_id))
+      .query_async(&mut conn)
+      .instrument(tracing::info_span!("redis-queue-pull-hget"))
+      .await?;
+
+    if op["task_type"] != std::any::type_name::<Self::Item>() {
+      tracing::error!(message = "Invalid task type encountered in the queue", task_type = %op["task_type"]);
+      return Err(Self::Error::InvalidTaskType(
+        std::any::type_name::<Self::Item>().to_string(),
+        op["task_type"].to_string(),
+      ));
+    }
+
+    let mut decoder = self.codec.decoder();
+    let task = op["task"].clone();
+    let mut buf = task.into_bytes();
+    let task: Option<Self::Item> = decoder.decode(&mut buf)?;
+
+    match task {
+      Some(t) => Ok(Some(RedisMessage {
+        ack_id: op_id,
+        data: t,
+      })),
+      None => Err(Self::Error::Internal("Failed to decode task".to_string())),
+    }
   }
 
-  async fn ack(&self, _ack_id: &str) -> Result<(), Self::Error> {
-    todo!()
+  async fn ack(&self, ack_id: &str, ctx: &Context) -> Result<(), Self::Error> {
+    let mut conn = self.client.get_async_connection().await?;
+
+    let maybe_queue: Option<String> = conn
+      .hget(format!("operation:{}", ack_id), "queue")
+      .instrument(tracing::info_span!("redis-queue-ack-hget"))
+      .await?;
+
+    let queue = match maybe_queue {
+      None => {
+        tracing::debug!(message = "Cannot find queue name", %ack_id);
+        return Err(Self::Error::NotFound(format!(
+          "Missing operation queue info for ack_id = {}",
+          ack_id
+        )));
+      }
+      Some(q) => q,
+    };
+
+    let _ = redis::pipe()
+      .atomic()
+      .hset_multiple(
+        format!("operation:{}", ack_id),
+        &[
+          ("ack_system_id", ctx.system_id()),
+          ("ack_ts", &Utc::now().timestamp_nanos().to_string()),
+          ("ack_user_id", ctx.user_id()),
+        ],
+      )
+      .ignore()
+      .lrem(format!("queue:{}", queue), -1, queue)
+      .ignore()
+      .query_async(&mut conn)
+      .instrument(tracing::info_span!("redis-queue-ack-lrem"))
+      .await?;
+
+    tracing::debug!(message = "Acknowledged message", %ack_id);
+    Ok(())
   }
 }
 
@@ -193,7 +297,7 @@ mod tests {
 
   #[tokio::test]
   async fn offer_should_add_item_to_queue() {
-    let ctx = Context::new(Uuid::new_v4().to_string());
+    let ctx = Context::new(Uuid::new_v4().to_string(), String::from("1234"));
     let queue = Uuid::new_v4().to_string();
     let client = redis::Client::open("redis://127.0.0.1/").unwrap();
     let q: RedisQueue<Task, JsonCodec<Task, Task>> =
@@ -213,7 +317,7 @@ mod tests {
   #[tokio::test]
   async fn offer_should_set_metadata_while_adding_item_to_queue() {
     let queue = Uuid::new_v4().to_string();
-    let ctx = Context::new(Uuid::new_v4().to_string());
+    let ctx = Context::new(Uuid::new_v4().to_string(), String::from("1234"));
     let ts = Utc::now().timestamp_nanos();
     let client = redis::Client::open("redis://127.0.0.1/").unwrap();
     let q: RedisQueue<Task, JsonCodec<Task, Task>> =
@@ -239,7 +343,7 @@ mod tests {
 
   #[tokio::test]
   async fn should_enqueue_task_to_broker() {
-    let ctx = Context::new(Uuid::new_v4().to_string());
+    let ctx = Context::new(Uuid::new_v4().to_string(), String::from("1234"));
     let queue = Uuid::new_v4().to_string();
     let client = redis::Client::open("redis://127.0.0.1/").unwrap();
     let q: RedisBroker<Task> = RedisBroker::new(client.clone(), queue.clone());
