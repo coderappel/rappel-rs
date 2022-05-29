@@ -50,7 +50,7 @@ impl Context {
 }
 
 #[async_trait::async_trait]
-pub(crate) trait Queue {
+pub trait Queue {
   type Item: Performable;
 
   type ReceivedItem: Task<Self::Item>;

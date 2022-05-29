@@ -49,13 +49,19 @@ impl<U: DeserializeOwned> Decoder for SerdeJsonDecoder<U> {
   }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct JsonCodec<T, U>(PhantomData<(T, U)>);
 
 impl<T: Serialize, U: DeserializeOwned> JsonCodec<T, U> {
   pub fn new() -> Self {
-    Self(PhantomData)
+    Self::default()
   }
+}
+
+impl<T: Serialize, U: DeserializeOwned> Default for JsonCodec<T, U> {
+    fn default() -> Self {
+        Self(PhantomData)
+    }
 }
 
 impl<T, U> Codec for JsonCodec<T, U>

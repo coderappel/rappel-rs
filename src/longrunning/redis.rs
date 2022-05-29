@@ -33,10 +33,10 @@ pub struct RedisBroker<T: Serialize + DeserializeOwned + Performable> {
 }
 
 impl<T: Send + Sync + Serialize + DeserializeOwned + Performable> RedisBroker<T> {
-  pub fn new(client: redis::Client, queue_name: String) -> Self {
+  pub fn new(client: redis::Client, queue_name: &str) -> Self {
     Self {
       _client: client.clone(),
-      queue: RedisQueue::new(client, queue_name, JsonCodec::new()),
+      queue: RedisQueue::new(client, queue_name.to_string(), JsonCodec::new()),
       _phantom: PhantomData,
     }
   }
@@ -72,7 +72,7 @@ where
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct RedisQueue<T, C: Codec> {
+pub struct RedisQueue<T, C: Codec> {
   client: redis::Client,
   queue: String,
   codec: C,
@@ -346,7 +346,7 @@ mod tests {
     let ctx = Context::new(Uuid::new_v4().to_string(), String::from("1234"));
     let queue = Uuid::new_v4().to_string();
     let client = redis::Client::open("redis://127.0.0.1/").unwrap();
-    let q: RedisBroker<Task> = RedisBroker::new(client.clone(), queue.clone());
+    let q: RedisBroker<Task> = RedisBroker::new(client.clone(), &queue);
     let task = Task { item: 10 };
 
     let operation = q.enqueue(task, &ctx).await.unwrap();
