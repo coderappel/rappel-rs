@@ -160,7 +160,7 @@ impl<T: Send + Sync + Serialize + DeserializeOwned + Performable> super::Queue
           ("publish_ts", &publish_ts.to_string()),
           ("task", &task),
           ("user_id", ctx.user_id()),
-          ("task_type", std::any::type_name::<Self::Item>()),
+          ("task_type", Self::Item::type_name()),
         ],
       )
       .ignore()
@@ -184,7 +184,7 @@ impl<T: Send + Sync + Serialize + DeserializeOwned + Performable> super::Queue
       .await?;
 
     let op_id = match maybe_id {
-      None => return Err(Self::Error::NotFound("Empty Queue".to_string())),
+      None => return Ok(None),
       Some(id) => id,
     };
 
@@ -204,7 +204,7 @@ impl<T: Send + Sync + Serialize + DeserializeOwned + Performable> super::Queue
       .instrument(tracing::info_span!("redis-queue-pull-hget"))
       .await?;
 
-    if op["task_type"] != std::any::type_name::<Self::Item>() {
+    if op["task_type"] != Self::Item::type_name() {
       tracing::error!(message = "Invalid task type encountered in the queue", task_type = %op["task_type"]);
       return Err(Self::Error::InvalidTaskType(
         std::any::type_name::<Self::Item>().to_string(),
@@ -290,6 +290,10 @@ mod tests {
     type Context = ();
     type Output = Empty;
 
+    fn type_name() -> &'static str {
+      "longrunning::redis::tests::Task"
+    }
+
     async fn perform(&self, _: Self::Context) -> Result<Self::Output, Self::Error> {
       Ok(Empty::default())
     }
@@ -334,7 +338,7 @@ mod tests {
     assert!(result["publish_ts"].parse::<i64>().unwrap() >= ts);
     assert_eq!(
       result["task_type"],
-      "rappel::longrunning::redis::tests::Task"
+      "longrunning::redis::tests::Task"
     );
     assert_eq!(result["task"], "{\"item\":10}");
     assert_eq!(result["queue"], queue);

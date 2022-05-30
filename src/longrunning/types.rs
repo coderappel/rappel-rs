@@ -11,6 +11,8 @@ pub trait Performable {
 
   type Output: Message;
 
+  fn type_name() -> &'static str;
+
   async fn perform(&self, ctx: Self::Context) -> Result<Self::Output, Self::Error>;
 }
 
