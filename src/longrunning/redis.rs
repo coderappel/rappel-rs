@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 
 use chrono::Utc;
+use prost::Message;
 use redis::AsyncCommands;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -12,6 +13,7 @@ use crate::codec::json::JsonCodec;
 use crate::codec::Codec;
 use crate::codec::Decoder;
 use crate::codec::Encoder;
+use crate::proto::google::rpc::Status;
 use crate::proto::longrunning::Operation;
 
 use super::Broker;
@@ -81,8 +83,8 @@ pub struct RedisQueue<T, C: Codec> {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RedisMessage<T> {
-  ack_id: String,
-  data: T,
+  pub ack_id: String,
+  pub data: T,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -124,6 +126,52 @@ impl<T: Performable, C: Codec> RedisQueue<T, C> {
       codec,
       _phantom: PhantomData,
     }
+  }
+
+  pub async fn complete<M: Message, E: Into<Status>>(
+    &self,
+    id: &str,
+    r: Result<M, E>,
+    _ctx: &Context,
+  ) -> Result<(), RedisQueueError> {
+    let mut conn = self.client.get_async_connection().await?;
+    let mut pipe = redis::pipe();
+
+    let mut pipeline = pipe
+      .atomic()
+      .hset_multiple(
+        format!("operation:{}", id),
+        &[
+          ("done", "true"),
+          ("status", "Terminated"),
+          ("end_ts", &Utc::now().timestamp_nanos().to_string()),
+        ],
+      )
+      .ignore();
+
+    pipeline = match r {
+      Err(error) => {
+        let status: Status = error.into();
+
+        pipeline
+          .hset(format!("operation:{}", id), "error", status.encode_to_vec())
+          .ignore()
+      }
+      Ok(output) => pipeline
+        .hset(
+          format!("operation:{}", id),
+          "result",
+          output.encode_to_vec(),
+        )
+        .ignore(),
+    };
+
+    let _ = pipeline
+      .query_async(&mut conn)
+      .instrument(tracing::info_span!("redis-queue-complete"))
+      .await?;
+
+    Ok(())
   }
 }
 
@@ -336,10 +384,7 @@ mod tests {
 
     assert_eq!(result["status"], "New");
     assert!(result["publish_ts"].parse::<i64>().unwrap() >= ts);
-    assert_eq!(
-      result["task_type"],
-      "longrunning::redis::tests::Task"
-    );
+    assert_eq!(result["task_type"], "longrunning::redis::tests::Task");
     assert_eq!(result["task"], "{\"item\":10}");
     assert_eq!(result["queue"], queue);
     assert_eq!(result["user_id"], ctx.user_id());
