@@ -1,8 +1,12 @@
+use std::{path::PathBuf, env};
+
 fn main() {
+  let descriptor_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("descriptors.bin");
+
   tonic_build::configure()
     .build_server(true)
     .compile_well_known_types(true)
-    .file_descriptor_set_path("./devbox.pb")
+    .file_descriptor_set_path(&descriptor_path)
     .compile(
       &[
         "proto/rappel/system/clusters.proto",
@@ -26,4 +30,6 @@ fn main() {
   println!("cargo:rerun-if-changed=proto/cluster/workspace_nodes.proto");
   println!("cargo:rerun-if-changed=proto/rappel/workspace/ides.proto");
   println!("cargo:rerun-if-changed=proto/rappel/workspace/workspaces.proto");
+
+  std::fs::copy(&descriptor_path, "./descriptors.pb").unwrap();
 }

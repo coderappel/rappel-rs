@@ -4,6 +4,8 @@ use std::marker::PhantomData;
 use chrono::Utc;
 use prost::Message;
 use redis::AsyncCommands;
+use redis::FromRedisValue;
+use redis::from_redis_value;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use tracing_futures::Instrument;
@@ -204,6 +206,7 @@ impl<T: Send + Sync + Serialize + DeserializeOwned + Performable> super::Queue
         format!("operation:{}", id),
         &[
           ("status", "New"),
+          ("operation_id", &id),
           ("queue", &self.queue),
           ("publish_ts", &publish_ts.to_string()),
           ("task", &task),
@@ -315,6 +318,40 @@ impl<T: Send + Sync + Serialize + DeserializeOwned + Performable> super::Queue
   }
 }
 
+impl FromRedisValue for Operation {
+  fn from_redis_value(v: &redis::Value) -> redis::RedisResult<Self> {
+    let mut map: HashMap<String, String> = from_redis_value(v)?;
+
+    let op = Self {
+        operation_id: map.remove("operation_id").unwrap_or(String::default()),
+        metadata: HashMap::from([
+          ("task_type".to_string(), map.remove("task_type").unwrap_or(String::default())),
+          ("task".to_string(), map.remove("task").unwrap_or(String::default())),
+          ("user_id".to_string(), map.remove("user_id").unwrap_or(String::default())),
+          ("queue".to_string(), map.remove("queue").unwrap_or(String::default())),
+          ("status".to_string(), map.remove("status").unwrap_or(String::default())),
+        ]),
+        done: map.remove("done").map(|v| v == "true").unwrap_or(false),
+        error: None,
+        response: HashMap::default(),
+        creation_ts: map.remove("publish_ts").map(|v| {
+          let ts = v.parse::<i64>().expect("Failed to parse timestamp");
+          crate::proto::google::protobuf::Timestamp { seconds: ts / 1000_000_000, nanos: (ts % 1000_000_000) as i32 }
+        }),
+        start_ts: map.remove("dequeue_ts").map(|v| {
+          let ts = v.parse::<i64>().expect("Failed to parse timestamp");
+          crate::proto::google::protobuf::Timestamp { seconds: ts / 1000_000_000, nanos: (ts % 1000_000_000) as i32 }
+        }),
+        end_ts: map.remove("end_ts").map(|v| {
+          let ts = v.parse::<i64>().expect("Failed to parse timestamp");
+          crate::proto::google::protobuf::Timestamp { seconds: ts / 1000_000_000, nanos: (ts % 1000_000_000) as i32 }
+        }),
+    };
+
+    Ok(op)
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use std::collections::HashMap;
@@ -407,4 +444,5 @@ mod tests {
       .unwrap();
     assert_eq!(vec![operation.operation_id], result);
   }
+
 }

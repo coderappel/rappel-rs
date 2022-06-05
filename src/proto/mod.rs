@@ -45,3 +45,5 @@ pub mod rappel {
     tonic::include_proto!("rappel.workspace");
   }
 }
+
+pub const FILE_DESCRIPTOR_SET: &[u8] = tonic::include_file_descriptor_set!("descriptors");

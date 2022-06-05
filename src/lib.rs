@@ -16,7 +16,7 @@ pub mod longrunning;
 #[cfg(feature = "proto")]
 pub mod kube;
 
-#[cfg(feature = "redis-tokio")]
+#[cfg(feature = "redis")]
 pub mod redis;
 
 pub mod service;
