@@ -44,6 +44,8 @@ impl<C: DeserializeOwned + ServiceConfig> Service<C> {
   }
 
   fn init_logging(_opts: &ServiceOptions, _config: &C) -> Result<(), anyhow::Error> {
+    std::env::set_var("RUST_LOG", "debug,kube=debug");
+
     tracing_subscriber::fmt()
       .json()
       .flatten_event(true)

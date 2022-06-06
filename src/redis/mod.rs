@@ -1,5 +1,5 @@
 use redis::FromRedisValue;
-use redis::RedisError;
+pub use redis::RedisError;
 use redis::RedisResult;
 use redis::RedisWrite;
 use redis::ToRedisArgs;
