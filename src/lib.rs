@@ -13,7 +13,7 @@ pub mod proto;
 #[cfg(feature = "longrunning")]
 pub mod longrunning;
 
-#[cfg(feature = "proto")]
+#[cfg(feature = "kube")]
 pub mod kube;
 
 #[cfg(feature = "redis")]

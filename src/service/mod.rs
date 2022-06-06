@@ -2,6 +2,7 @@ mod client;
 mod config;
 mod error;
 mod locator;
+mod service;
 
 pub use client::ShardedClient;
 pub use error::Error;
@@ -16,3 +17,8 @@ pub type ClusterSvcClient = ClustersClient<Channel>;
 pub type OperationsSvcClient = OperationsClient<Channel>;
 pub type WorkspaceNodesSvcClient = WorkspaceNodesClient<Channel>;
 pub type WorkspaceNodesShardedClient = ShardedClient<WorkspaceNodesSvcClient>;
+
+pub use service::ServerConfig;
+pub use service::Service;
+pub use service::ServiceConfig;
+pub use service::ServiceOptions;

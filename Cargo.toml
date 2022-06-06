@@ -5,10 +5,11 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
-default = ["longrunning", "redis"]
+default = ["longrunning", "redis", "kube"]
 proto = []
 redis = []
 longrunning = ["proto"]
+kube = []
 
 [dependencies]
 bytes = "1"
@@ -46,6 +47,7 @@ tracing = "0.1"
 tracing-attributes = "0.1"
 tracing-futures = "0.2"
 tracing-log = "0.1"
+tracing-subscriber = {version = "0.3", features = ["json"]}
 smallvec = "1"
 
 [build-dependencies]
