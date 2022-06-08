@@ -1,5 +1,7 @@
 extern crate core;
 
+pub mod codec;
+
 #[cfg(feature = "proto")]
 pub mod grpc;
 
@@ -11,11 +13,10 @@ pub mod proto;
 #[cfg(feature = "longrunning")]
 pub mod longrunning;
 
-#[cfg(feature = "proto")]
-pub mod prost;
-
-#[cfg(feature = "proto")]
+#[cfg(feature = "kube")]
 pub mod kube;
 
 #[cfg(feature = "redis")]
 pub mod redis;
+
+pub mod service;

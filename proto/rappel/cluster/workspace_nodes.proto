@@ -1,11 +1,10 @@
 syntax = "proto3";
 
-package cluster;
+package rappel.cluster;
 
 import "google/protobuf/timestamp.proto";
 import "longrunning/operations.proto";
-import "app/workspace.proto";
-import "app/resource.proto";
+import "rappel/workspace/workspaces.proto";
 
 message Port {
   string name = 1;
@@ -82,28 +81,25 @@ service WorkspaceNodes {
 
   rpc List(ListWorkspaceNodeRequest) returns (ListWorkspaceNodeResponse);
 
-  rpc Delete(DeleteWorkspaceNodeRequest) returns (longrunning.Operation);
+  rpc Start(StartWorkspaceRequest) returns (longrunning.Operation);
+
+  rpc Stop(StopWorkspaceRequest) returns (longrunning.Operation);
+
+  rpc Delete(DeleteWorkspaceRequest) returns (longrunning.Operation);
 }
 
 message CreateWorkspaceNodeRequest {
-  app.workspace.Workspace workspace = 1;
-  
-
-  app.resource.ResourceBundle resource_bundle = 5;
-
-  app.resource.DiskType disk_type = 6;
-
-  app.resource.DiskImage disk_image = 7;
+  rappel.workspace.Workspace workspace = 1;
 
   map<string, string> labels = 10;
 }
 
 message GetWorkspaceNodeRequest {
-  string node_id = 1;
+  rappel.workspace.Workspace workspace = 1;
 }
 
-message DeleteWorkspaceNodeRequest {
-  string node_id = 1;
+message DeleteWorkspaceRequest {
+  rappel.workspace.Workspace workspace = 1;
 }
 
 message ListWorkspaceNodeRequest {
@@ -116,4 +112,12 @@ message ListWorkspaceNodeResponse {
   repeated WorkspaceNode workspace_node = 1;
 
   string next_page_token = 5;
+}
+
+message StartWorkspaceRequest {
+  rappel.workspace.Workspace workspace = 1;
+}
+
+message StopWorkspaceRequest {
+  rappel.workspace.Workspace workspace = 1;
 }

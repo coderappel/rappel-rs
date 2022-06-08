@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+package rappel.workspace;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/field_mask.proto";
+import "google/api/annotations.proto";
+
+import "rappel/workspace/resources.proto";
+
+enum TemplateStatus {
+  TEMPLATE_STATUS_UNKNOWN = 0;
+  TEMPLATE_STATUS_ACTIVE = 1;
+  TEMPLATE_STATUS_DEPRECATED = 2;
+  TEMPLATE_STATUS_DELETED = 3;
+}
+
+service Templates {
+  rpc Create(CreateTemplateRequest) returns (Template) {
+    option (google.api.http) = {
+      post: "/api/v1/workspaceTemplates",
+      body: "*"
+    };
+  }
+
+  rpc List(ListTemplateRequest) returns (ListTemplateResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/workspaceTemplates",
+    };
+  }
+
+  rpc Get(GetTemplateRequest) returns (Template) {
+    option (google.api.http) = {
+      get: "/api/v1/workspaceTemplates/{template_instance_id}",
+    };
+  }
+
+  rpc Delete(DeleteTemplateRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/api/v1/workspaceTemplates/{template_instance_id}",
+    };
+  }
+}
+
+message Template {
+  int64 template_instance_id = 1;
+
+  int64 template_id = 2;
+
+  string owner = 3;
+
+  string location = 4;
+
+  string display_name = 5;
+
+  TemplateStatus status = 7;
+
+  int32 cpu_count = 10;
+
+  int32 memory_in_mb = 11;
+
+  repeated rappel.workspace.Disk disk = 12;
+
+  bool autocreated = 19;
+
+  google.protobuf.Timestamp creation_ts = 20;
+
+  int64 creation_user_id = 21;
+
+  google.protobuf.Timestamp last_update_ts = 22;
+
+  int64 last_update_user_id = 23;
+}
+
+message CreateTemplateRequest {
+  Template template = 1;
+}
+
+message ListTemplateRequest {
+  repeated int64 template_id = 1;
+
+  repeated int64 user_id = 2;
+
+  repeated TemplateStatus status = 3;
+
+  int32 page_count = 5;
+
+  string page_token = 6;
+
+  google.protobuf.FieldMask mask = 7;
+}
+
+message ListTemplateResponse {
+  repeated Template template = 1;
+
+  int32 total_count = 2;
+
+  int32 offset = 3;
+
+  string next_page_token = 5;
+}
+
+message GetTemplateRequest {
+  int64 template_instance_id = 1;
+}
+
+message DeleteTemplateRequest {
+  int64 template_instance_id = 1;
+}

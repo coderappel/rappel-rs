@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package rappel.cluster;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "rappel/system/clusters.proto";
+
+service Admin {
+  rpc Info(ClusterInfoRequest) returns (ClusterInfo) {
+    option(google.api.http) = {
+      get: "/api/v1/cluster/admin/info"
+    };
+  }
+
+  rpc Startup(StartupClusterRequest) returns (google.protobuf.Empty) {
+    option(google.api.http) = {
+      post: "/api/v1/cluster/admin/startup",
+      body: "*"
+    };
+  }
+
+  rpc Shutdown(ShutdownClusterRequest) returns (google.protobuf.Empty) {
+    option(google.api.http) = {
+      post: "/api/v1/cluster/admin/shutdown",
+      body: "*"
+    };
+  }
+}
+
+message ClusterInfo {
+  rappel.system.Cluster cluster = 1;
+}
+
+message ClusterInfoRequest {}
+
+message ShutdownClusterRequest {}
+
+message StartupClusterRequest {}

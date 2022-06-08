@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package rappel.workspace;
+
+/**
+ Represents a disk resource attached to a workspace. A workspace
+ must have at least one boot disk and can have multiple data disk
+ mounted at different mount points.
+ */
+message Disk {
+  string disk_id = 1;
+  /**
+   Mount point on the workspace where the current disk should
+   be mounted. Boot disk can only be mounted at root. Some
+   directories may be protected and mounting might be prohibited
+   to such locations.
+   */
+  string mount_point = 5;
+
+  /**
+   Represents the disk type. It can be one of the following
+   BOOT: Boot disk that can only be mounted at /
+   PD_SSD: Persistent SSD
+   PD_DISK: Persistent Spinning Disk
+   ED_SSD: Ephemeral SSD
+   ED_DISK: Ephemeral Spinning Disk
+   LOCAL_SSD: SSD locally attached to the workspace machine
+   */
+  string disk_type = 6;
+
+  /**
+   Size of the disk in Gigabytes.
+   */
+  int32 disk_size_gb = 7;
+
+  /**
+   The URL for the disk image to create the disk from. This is
+   mandatory for Boot Disks.
+   */
+  string disk_image_url = 8;
+}

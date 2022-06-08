@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package rappel.process;
+
+import "google/protobuf/timestamp.proto";
+
+enum Status {
+  STATUS_UNKNOWN = 0;
+  STATUS_PENDING = 1;
+  STATUS_STARTING = 2;
+  STATUS_RUNNING = 3;
+  STATUS_TERMINATING = 4;
+  STATUS_TERMINATED = 5;
+}
+
+message ExitStatus {
+  int32 exit_code = 1;
+
+  string exit_message = 2;
+
+  string exit_reason = 3;
+
+  google.protobuf.Timestamp last_update_ts = 5;
+}

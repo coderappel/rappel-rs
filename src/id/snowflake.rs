@@ -50,7 +50,10 @@ impl Snowflake {
   }
 
   fn curr_time() -> i64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).expect("should read time").as_millis() as i64
+    SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .expect("should read time")
+      .as_millis() as i64
   }
 }
 
@@ -81,9 +84,7 @@ impl super::UidGenerator for Snowflake {
       *last_ts = curr_ts;
     }
 
-    let id = ((*last_ts - self.ts_epoch) << 22)
-      | (self.machine_id << 12)
-      | (self.sequence);
+    let id = ((*last_ts - self.ts_epoch) << 22) | (self.machine_id << 12) | (self.sequence);
 
     Ok(id)
   }
@@ -96,7 +97,10 @@ mod tests {
 
   #[test]
   fn test_create_snowflake() {
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).expect("should read time").as_millis() as i64;
+    let now = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .expect("should read time")
+      .as_millis() as i64;
     let curr_time = Snowflake::curr_time();
 
     assert!(curr_time - now >= 0);

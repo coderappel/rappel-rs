@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package rappel.account;
+
+import "google/api/annotations.proto";
+
+service BillingAccounts {
+  rpc Create(CreateBillingAccountRequest) returns (BillingAccount) {
+    option (google.api.http) = {
+      post: "/api/v1/accounts",
+      body: "*"
+    };
+  }
+
+  rpc Get(GetBillingAccountRequest) returns (BillingAccount) {
+    option (google.api.http) = {
+      get: "/api/v1/accounts/{billing_account_id}"
+    };
+  }
+
+  rpc List(ListBillingAccountRequest) returns (ListBillingAccountResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/accounts"
+    };
+  }
+}
+
+message BillingAccount {
+  int64 billing_account_id = 1;
+
+  string display_name = 2;
+}
+
+message CreateBillingAccountRequest {
+  BillingAccount billing_account = 1;
+
+  repeated string associations = 2;
+}
+
+message GetBillingAccountRequest {
+  int64 billing_account_id = 1;
+}
+
+message ListBillingAccountRequest {
+}
+
+message ListBillingAccountResponse {
+  repeated BillingAccount billing_accounts = 1;
+}

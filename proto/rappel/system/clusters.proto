@@ -1,0 +1,121 @@
+syntax = "proto3";
+
+package rappel.system;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "rappel/workspace/workspaces.proto";
+
+service Clusters {
+  rpc Create(CreateClusterRequest) returns (Cluster) {
+    option (google.api.http) = {
+      post: "/api/v1/clusters",
+      body: "*"
+    };
+  }
+
+  rpc Get(GetClusterRequest) returns (Cluster) {
+    option (google.api.http) = {
+      get: "/api/v1/clusters/{cluster_id}"
+    };
+  }
+
+  rpc Select(SelectClusterRequest) returns (Cluster) {
+    option (google.api.http) = {
+      post: "/api/v1/clusters/method:select",
+      body: "*"
+    };
+  }
+
+  rpc List(ListClusterRequest) returns (ListClusterResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/clusters"
+    };
+  }
+
+  rpc Startup(StartClusterRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/v1/clusters/{cluster_id}/method:startup"
+    };
+  }
+
+  rpc Shutdown(ShutdownClusterRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/v1/clusters/{cluster_id}/method:shutdown"
+    };
+  }
+}
+
+message Cluster {
+  string cluster_id = 1;
+
+  ClusterType cluster_type = 2;
+
+  string location = 5;
+
+  ClusterStatus cluster_status = 10;
+
+  map<string, int64> cluster_capacity = 16;
+
+  map<string, string> labels = 19;
+
+  map<string, string> addresses = 20;
+}
+
+enum ClusterPhase {
+  CLUSTER_PHASE_UNKNOWN = 0;
+  CLUSTER_PHASE_STARTING = 1;
+  CLUSTER_PHASE_RUNNING = 2;
+  CLUSTER_PHASE_DRAINING = 3;
+  CLUSTER_PHASE_DRAINED = 4;
+}
+
+enum ClusterType {
+  CLUSTER_TYPE_UNKNOWN = 0;
+  CLUSTER_TYPE_GCP_VM = 1;
+  CLUSTER_TYPE_GKE = 2;
+  CLUSTER_TYPE_KUBERNETES = 3;
+}
+
+message ClusterStatus {
+  ClusterPhase phase = 1;
+
+  bool ready = 5;
+
+  map<string, int64> cluster_size = 9;
+
+  google.protobuf.Timestamp start_ts = 10;
+
+  google.protobuf.Timestamp last_probe_ts = 11;
+}
+
+message CreateClusterRequest {
+  Cluster cluster = 1;
+}
+
+message UpdateClusterRequest {
+  Cluster cluster = 1;
+}
+
+message GetClusterRequest {
+  string cluster_id = 1;
+}
+
+message StartClusterRequest {
+  string cluster_id = 1;
+}
+
+message ShutdownClusterRequest {
+  string cluster_id = 1;
+}
+
+message SelectClusterRequest {
+  rappel.workspace.Workspace workspace = 1;
+}
+
+message ListClusterRequest {}
+
+message ListClusterResponse {
+  repeated Cluster cluster = 1;
+}
