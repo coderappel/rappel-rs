@@ -1,13 +1,13 @@
 use crate::proto::cluster::NodePhase;
 use crate::proto::cluster::NodeStatus;
-use crate::proto::cluster::WorkspaceNode;
+use crate::proto::cluster::Workspace;
 use crate::proto::prelude::ProstTimestamp;
 use k8s_openapi::api::core::v1::Pod;
 use kube::ResourceExt;
 use std::collections::HashMap;
 
 pub trait PodExt {
-  fn into_workspace_node(&self) -> WorkspaceNode;
+  fn into_workspace_node(&self) -> Workspace;
 
   fn is_running(&self) -> bool;
 
@@ -21,13 +21,13 @@ pub trait PodExt {
 }
 
 impl PodExt for Pod {
-  fn into_workspace_node(&self) -> WorkspaceNode {
+  fn into_workspace_node(&self) -> Workspace {
     let mut labels = HashMap::default();
     labels.extend(self.labels().clone());
     let mut annotations = HashMap::default();
     annotations.extend(self.annotations().clone());
 
-    let mut node = WorkspaceNode::default();
+    let mut node = Workspace::default();
     node.node_id = self.name();
 
     node.cluster_id = labels.remove("rappel_cluster_id").unwrap();

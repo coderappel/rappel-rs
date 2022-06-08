@@ -11,7 +11,7 @@ fn main() {
       &[
         "proto/rappel/system/clusters.proto",
         "proto/rappel/system/location.proto",
-        "proto/rappel/cluster/workspace_nodes.proto",
+        "proto/rappel/cluster/workspaces.proto",
         "proto/rappel/account/billing.proto",
         "proto/rappel/account/organization.proto",
         "proto/rappel/workspace/ides.proto",
@@ -27,7 +27,7 @@ fn main() {
   println!("cargo:rerun-if-changed=migrations");
   println!("cargo:rerun-if-changed=build.rs");
   println!("cargo:rerun-if-changed=proto/google/protobuf/any.proto");
-  println!("cargo:rerun-if-changed=proto/cluster/workspace_nodes.proto");
+  println!("cargo:rerun-if-changed=proto/rappel/cluster/workspaces.proto");
   println!("cargo:rerun-if-changed=proto/rappel/workspace/ides.proto");
   println!("cargo:rerun-if-changed=proto/rappel/workspace/workspaces.proto");
 

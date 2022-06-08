@@ -46,7 +46,7 @@ message NodeStatus {
   google.protobuf.Timestamp last_probe_time = 11;
 }
 
-message WorkspaceNode {
+message Workspace {
   string node_id = 1;
 
   string cluster_id = 2;
@@ -74,12 +74,12 @@ message WorkspaceNode {
   NodeStatus status = 15;
 }
 
-service WorkspaceNodes {
-  rpc Create(CreateWorkspaceNodeRequest) returns (longrunning.Operation);
+service Workspaces {
+  rpc Create(CreateWorkspaceRequest) returns (longrunning.Operation);
 
-  rpc Get(GetWorkspaceNodeRequest) returns (WorkspaceNode);
+  rpc Get(GetWorkspaceRequest) returns (Workspace);
 
-  rpc List(ListWorkspaceNodeRequest) returns (ListWorkspaceNodeResponse);
+  rpc List(ListWorkspaceRequest) returns (ListWorkspaceResponse);
 
   rpc Start(StartWorkspaceRequest) returns (longrunning.Operation);
 
@@ -88,13 +88,13 @@ service WorkspaceNodes {
   rpc Delete(DeleteWorkspaceRequest) returns (longrunning.Operation);
 }
 
-message CreateWorkspaceNodeRequest {
+message CreateWorkspaceRequest {
   rappel.workspace.Workspace workspace = 1;
 
   map<string, string> labels = 10;
 }
 
-message GetWorkspaceNodeRequest {
+message GetWorkspaceRequest {
   rappel.workspace.Workspace workspace = 1;
 }
 
@@ -102,14 +102,14 @@ message DeleteWorkspaceRequest {
   rappel.workspace.Workspace workspace = 1;
 }
 
-message ListWorkspaceNodeRequest {
+message ListWorkspaceRequest {
   repeated int64 workspace_id = 1;
 
   string page_token = 5;
 }
 
-message ListWorkspaceNodeResponse {
-  repeated WorkspaceNode workspace_node = 1;
+message ListWorkspaceResponse {
+  repeated Workspace workspace_node = 1;
 
   string next_page_token = 5;
 }
