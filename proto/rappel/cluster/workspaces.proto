@@ -95,11 +95,11 @@ message CreateWorkspaceRequest {
 }
 
 message GetWorkspaceRequest {
-  rappel.workspace.Workspace workspace = 1;
+  int64 workspace_id = 1;
 }
 
 message DeleteWorkspaceRequest {
-  rappel.workspace.Workspace workspace = 1;
+  int64 workspace_id = 1;
 }
 
 message ListWorkspaceRequest {
@@ -115,9 +115,9 @@ message ListWorkspaceResponse {
 }
 
 message StartWorkspaceRequest {
-  rappel.workspace.Workspace workspace = 1;
+  int64 workspace_id = 1;
 }
 
 message StopWorkspaceRequest {
-  rappel.workspace.Workspace workspace = 1;
+  int64 workspace_id = 1;
 }
