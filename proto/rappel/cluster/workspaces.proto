@@ -46,7 +46,7 @@ message NodeStatus {
   google.protobuf.Timestamp last_probe_time = 11;
 }
 
-message Workspace {
+message WorkspaceServer {
   string node_id = 1;
 
   string cluster_id = 2;
@@ -77,7 +77,7 @@ message Workspace {
 service Workspaces {
   rpc Create(CreateWorkspaceRequest) returns (longrunning.Operation);
 
-  rpc Get(GetWorkspaceRequest) returns (Workspace);
+  rpc Get(GetWorkspaceRequest) returns (WorkspaceServer);
 
   rpc List(ListWorkspaceRequest) returns (ListWorkspaceResponse);
 
@@ -109,7 +109,7 @@ message ListWorkspaceRequest {
 }
 
 message ListWorkspaceResponse {
-  repeated Workspace workspace_node = 1;
+  repeated WorkspaceServer workspace_server = 1;
 
   string next_page_token = 5;
 }

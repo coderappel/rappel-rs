@@ -1,10 +1,14 @@
+use std::net::AddrParseError;
 use std::net::IpAddr;
+use std::net::SocketAddr;
 
 use config::Config;
 use config::Environment;
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use tracing::Level;
+
+use super::Error;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct ServerConfig {
@@ -13,25 +17,31 @@ pub struct ServerConfig {
   pub external_ip: IpAddr,
 }
 
-pub trait ServiceConfig {
-    fn server_config(&self) -> &ServerConfig;
+#[derive(Clone, Debug, Deserialize)]
+pub struct LogConfig {}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ServiceConfig {
+  pub server: ServerConfig,
+  pub log: LogConfig,
 }
 
-pub struct Service<C: ServiceConfig> {
-  config: C,
+pub struct Service {
+  config: Config,
+  service_config: ServiceConfig,
 }
 
 #[derive(Default)]
 pub struct ServiceOptions {}
 
-impl<C: DeserializeOwned + ServiceConfig> Service<C> {
+impl Service {
   pub fn try_new(opts: ServiceOptions) -> Result<Self, anyhow::Error> {
-    let conf = Self::init_config(&opts)?;
-    let config: C = conf.try_deserialize()?;
+    let config = Self::init_config(&opts)?;
+    let service_config: ServiceConfig = config.clone().try_deserialize()?;
 
-    let _ = Self::init_logging(&opts, &config)?;
+    let _ = Self::init_logging(&opts, &service_config.log)?;
 
-    let svc = Service { config };
+    let svc = Service { config, service_config };
 
     Ok(svc)
   }
@@ -43,7 +53,7 @@ impl<C: DeserializeOwned + ServiceConfig> Service<C> {
       .build()
   }
 
-  fn init_logging(_opts: &ServiceOptions, _config: &C) -> Result<(), anyhow::Error> {
+  fn init_logging(_opts: &ServiceOptions, _config: &LogConfig) -> Result<(), anyhow::Error> {
     std::env::set_var("RUST_LOG", "debug,kube=debug");
 
     tracing_subscriber::fmt()
@@ -55,7 +65,25 @@ impl<C: DeserializeOwned + ServiceConfig> Service<C> {
     Ok(())
   }
 
-  pub fn config(&self) -> &C {
-      &self.config
+  pub fn config<T: DeserializeOwned>(&self) -> Result<T, Error> {
+      self.config.clone().try_deserialize().map_err(|error| {
+        tracing::error!(message = "Failed to read config", %error);
+        error.into()
+      })
   }
+
+  pub fn address(&self) -> Result<SocketAddr, Error> {
+    self.service_config.server.address.parse().map_err(|error: AddrParseError| {
+      tracing::error!(message = "Failed to parse server address", %error);
+      error.into()
+    })
+  }
+
+  pub fn machine_id(&self) -> i64 {
+    match self.service_config.server.external_ip {
+      IpAddr::V4(ip) => (u32::from(ip) & 0x03FF) as i64,
+      _ => panic!("Only ipv4 addesses supported"),
+    }
+  }
+
 }
