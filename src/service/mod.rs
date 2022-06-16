@@ -1,8 +1,11 @@
 mod client;
 mod config;
+mod context;
 mod error;
 mod locator;
 mod service;
+
+pub use context::Context;
 
 pub use client::ShardedClient;
 pub use error::Error;
