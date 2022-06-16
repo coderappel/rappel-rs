@@ -23,6 +23,10 @@ impl From<Error> for tonic::Status {
 }
 
 impl Context {
+  pub fn new(user_id: i64) -> Context {
+      Context { user_id }
+  }
+
   pub fn from_request<T>(r: &tonic::Request<T>) -> Result<Context, Error> {
     let user_id = match r.metadata().get("x-user-id") {
       Some(u) => u.to_str().map(|uid| uid.parse()),

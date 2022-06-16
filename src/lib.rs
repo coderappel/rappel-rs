@@ -2,9 +2,6 @@ extern crate core;
 
 pub mod codec;
 
-#[cfg(feature = "proto")]
-pub mod grpc;
-
 pub mod id;
 
 #[cfg(feature = "proto")]
