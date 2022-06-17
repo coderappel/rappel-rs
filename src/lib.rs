@@ -10,9 +10,6 @@ pub mod proto;
 #[cfg(feature = "longrunning")]
 pub mod longrunning;
 
-#[cfg(feature = "kube")]
-pub mod kube;
-
 #[cfg(feature = "redis")]
 pub mod redis;
 

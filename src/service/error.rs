@@ -1,6 +1,5 @@
 use std::net::AddrParseError;
-
-use k8s_openapi::http::uri::InvalidUri;
+use tonic::codegen::http::uri::InvalidUri;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
