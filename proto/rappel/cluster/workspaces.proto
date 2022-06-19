@@ -75,17 +75,21 @@ message WorkspaceServer {
 }
 
 service Workspaces {
-  rpc Create(CreateWorkspaceRequest) returns (longrunning.Operation);
+  rpc Create(CreateWorkspaceRequest) returns (WorkspaceServer);
 
   rpc Get(GetWorkspaceRequest) returns (WorkspaceServer);
 
   rpc List(ListWorkspaceRequest) returns (ListWorkspaceResponse);
 
-  rpc Start(StartWorkspaceRequest) returns (longrunning.Operation);
+  rpc Start(StartWorkspaceRequest) returns (WorkspaceServer);
 
-  rpc Stop(StopWorkspaceRequest) returns (longrunning.Operation);
+  rpc Stop(StopWorkspaceRequest) returns (WorkspaceServer);
 
-  rpc Delete(DeleteWorkspaceRequest) returns (longrunning.Operation);
+  rpc Restart(RestartWorkspaceRequest) returns (WorkspaceServer);
+
+  rpc Replace(ReplaceWorkspaceRequest) returns (WorkspaceServer);
+
+  rpc Delete(DeleteWorkspaceRequest) returns (WorkspaceServer);
 }
 
 message CreateWorkspaceRequest {
@@ -119,5 +123,13 @@ message StartWorkspaceRequest {
 }
 
 message StopWorkspaceRequest {
+  int64 workspace_id = 1;
+}
+
+message RestartWorkspaceRequest {
+  int64 workspace_id = 1;
+}
+
+message ReplaceWorkspaceRequest {
   int64 workspace_id = 1;
 }
