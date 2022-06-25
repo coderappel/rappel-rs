@@ -71,7 +71,7 @@ enum WorkspaceStatus {
 message Workspace {
   int64 workspace_id = 1;
 
-  string owner = 2;
+  int64 owner = 2;
 
   rappel.workspace.Template template = 3;
 

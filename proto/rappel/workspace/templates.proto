@@ -48,7 +48,7 @@ message Template {
 
   int64 template_id = 2;
 
-  string owner = 3;
+  int64 owner = 3;
 
   string location = 4;
 
