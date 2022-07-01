@@ -2,7 +2,6 @@ use std::net::AddrParseError;
 use std::net::IpAddr;
 use std::net::SocketAddr;
 
-
 use super::ServiceLocator;
 use config::Config;
 use config::Environment;

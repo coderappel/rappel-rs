@@ -21,6 +21,7 @@ pub type OperationsSvcClient = OperationsClient<Channel>;
 pub type ClusterWorkspacesClient = WorkspacesClient<Channel>;
 pub type ClusterWorkspacesShardedClient = ShardedClient<ClusterWorkspacesClient>;
 
+pub use locator::ServiceRegistry;
 pub use service::ServerConfig;
 pub use service::Service;
 pub use service::ServiceConfig;
