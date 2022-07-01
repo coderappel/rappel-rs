@@ -17,4 +17,7 @@ pub enum Error {
 
   #[error("AddrParseError: {0}")]
   AddrParseError(#[from] AddrParseError),
+
+  #[error("Unknown: {0}")]
+  Unknown(#[from] anyhow::Error),
 }

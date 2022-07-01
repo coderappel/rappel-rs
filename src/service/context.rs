@@ -17,14 +17,14 @@ pub enum Error {
 }
 
 impl From<Error> for tonic::Status {
-    fn from(_: Error) -> Self {
-        tonic::Status::unauthenticated("Unauthenticated")
-    }
+  fn from(_: Error) -> Self {
+    tonic::Status::unauthenticated("Unauthenticated")
+  }
 }
 
 impl Context {
   pub fn new(user_id: i64) -> Context {
-      Context { user_id }
+    Context { user_id }
   }
 
   pub fn from_request<T>(r: &tonic::Request<T>) -> Result<Context, Error> {
@@ -45,6 +45,6 @@ impl Context {
   }
 
   pub fn user_id(&self) -> i64 {
-      self.user_id
+    self.user_id
   }
 }

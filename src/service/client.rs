@@ -1,6 +1,6 @@
 use tonic::transport::Channel;
 
-use super::config::ServiceConf;
+use super::locator::ServiceConf;
 
 #[derive(Clone, Debug)]
 pub struct ShardedClient<T: Clone> {
@@ -9,7 +9,7 @@ pub struct ShardedClient<T: Clone> {
 }
 
 impl<T: Clone> ShardedClient<T> {
-  pub(crate) async fn try_new<F: Fn(Channel) -> T>(
+  pub(crate) fn try_new<F: Fn(Channel) -> T>(
     config: ServiceConf,
     builder: F,
   ) -> Result<Self, super::Error> {

@@ -1,4 +1,4 @@
-use std::{path::PathBuf, env};
+use std::{env, path::PathBuf};
 
 fn main() {
   let descriptor_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("descriptors.bin");

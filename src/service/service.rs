@@ -2,10 +2,12 @@ use std::net::AddrParseError;
 use std::net::IpAddr;
 use std::net::SocketAddr;
 
+
+use super::ServiceLocator;
 use config::Config;
 use config::Environment;
-use serde::Deserialize;
 use serde::de::DeserializeOwned;
+use serde::Deserialize;
 use tracing::Level;
 
 use super::Error;
@@ -29,6 +31,7 @@ pub struct ServiceConfig {
 pub struct Service {
   config: Config,
   service_config: ServiceConfig,
+  service_locator: ServiceLocator,
 }
 
 #[derive(Default)]
@@ -37,11 +40,16 @@ pub struct ServiceOptions {}
 impl Service {
   pub fn try_new(opts: ServiceOptions) -> Result<Self, anyhow::Error> {
     let config = Self::init_config(&opts)?;
+    let service_locator = ServiceLocator::try_new(Self::init_service_locator(&opts)?)?;
     let service_config: ServiceConfig = config.clone().try_deserialize()?;
 
     let _ = Self::init_logging(&opts, &service_config.log)?;
 
-    let svc = Service { config, service_config };
+    let svc = Service {
+      config,
+      service_config,
+      service_locator,
+    };
 
     Ok(svc)
   }
@@ -50,6 +58,13 @@ impl Service {
     Config::builder()
       .add_source(config::File::with_name("config/application"))
       .add_source(Environment::with_prefix("APP").separator("_"))
+      .build()
+  }
+
+  fn init_service_locator(_opts: &ServiceOptions) -> Result<Config, config::ConfigError> {
+    Config::builder()
+      .add_source(config::File::with_name("config/service"))
+      .add_source(Environment::with_prefix("SVC").separator("_"))
       .build()
   }
 
@@ -66,17 +81,26 @@ impl Service {
   }
 
   pub fn config<T: DeserializeOwned>(&self) -> Result<T, Error> {
-      self.config.clone().try_deserialize().map_err(|error| {
-        tracing::error!(message = "Failed to read config", %error);
-        error.into()
-      })
+    self.config.clone().try_deserialize().map_err(|error| {
+      tracing::error!(message = "Failed to read config", %error);
+      error.into()
+    })
+  }
+
+  pub async fn service_locator(&self) -> &ServiceLocator {
+    &self.service_locator
   }
 
   pub fn address(&self) -> Result<SocketAddr, Error> {
-    self.service_config.server.address.parse().map_err(|error: AddrParseError| {
-      tracing::error!(message = "Failed to parse server address", %error);
-      error.into()
-    })
+    self
+      .service_config
+      .server
+      .address
+      .parse()
+      .map_err(|error: AddrParseError| {
+        tracing::error!(message = "Failed to parse server address", %error);
+        error.into()
+      })
   }
 
   pub fn machine_id(&self) -> i64 {
@@ -85,5 +109,4 @@ impl Service {
       _ => panic!("Only ipv4 addesses supported"),
     }
   }
-
 }

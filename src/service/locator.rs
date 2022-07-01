@@ -1,62 +1,77 @@
 use crate::proto::longrunning::operations_client::OperationsClient;
 use crate::proto::system::clusters_client::ClustersClient;
 use crate::service::ClusterSvcClient;
-use crate::service::OperationsSvcClient;
 use crate::service::ClusterWorkspacesClient;
+use crate::service::OperationsSvcClient;
 
-use super::ClusterWorkspacesShardedClient;
 use super::client::ShardedClient;
+
+use serde_derive::Deserialize;
+
+#[allow(dead_code)]
+#[derive(Clone, Debug, Deserialize)]
+pub(crate) struct ServiceInstance {
+  pub address: String,
+  pub shard_ranges: Vec<(String, String)>,
+}
+
+#[allow(dead_code)]
+#[derive(Clone, Debug, Deserialize)]
+pub(crate) struct ServiceConf {
+  pub name: String,
+  pub instances: Vec<ServiceInstance>,
+}
+
+#[allow(dead_code, unused)]
+#[derive(Clone, Debug, Deserialize)]
+struct LocatorConfig {
+  pub cluster: ServiceConf,
+  pub longrunning: ServiceConf,
+  pub system: ServiceConf,
+  pub version: i64,
+}
+
+#[async_trait::async_trait]
+pub trait ServiceRegistry<T: Clone> {
+  async fn get(&self) -> anyhow::Result<ShardedClient<T>>;
+}
 
 #[derive(Debug, Clone)]
 pub struct ServiceLocator {
   clusters: ShardedClient<ClusterSvcClient>,
   operations: ShardedClient<OperationsSvcClient>,
-  workspace_nodes: ShardedClient<ClusterWorkspacesClient>,
+  cluster_workspaces: ShardedClient<ClusterWorkspacesClient>,
 }
 
-const ERROR_MISSING_SERVICE: &str = "Missing Service";
-
 impl ServiceLocator {
-  pub async fn try_new() -> Result<ServiceLocator, super::Error> {
-    let conf = config::Config::builder()
-      .add_source(config::File::with_name("config/service"))
-      .add_source(config::Environment::with_prefix("APP").separator("_"))
-      .build()?;
-
-    let config: super::config::Config = conf.try_deserialize()?;
+  pub fn try_new(conf: config::Config) -> anyhow::Result<ServiceLocator> {
+    let config: LocatorConfig = conf.try_deserialize()?;
 
     Ok(ServiceLocator {
-      clusters: ShardedClient::try_new(config.system, ClustersClient::new).await?,
-      operations: ShardedClient::try_new(config.longrunning, OperationsClient::new).await?,
-      workspace_nodes: ShardedClient::try_new(config.cluster, ClusterWorkspacesClient::new).await?,
+      clusters: ShardedClient::try_new(config.system, ClustersClient::new)?,
+      operations: ShardedClient::try_new(config.longrunning, OperationsClient::new)?,
+      cluster_workspaces: ShardedClient::try_new(config.cluster, ClusterWorkspacesClient::new)?,
     })
   }
+}
 
-  pub async fn get_client(
-    &self,
-    svc: &str,
-  ) -> Result<ShardedClient<ClusterWorkspacesClient>, super::Error> {
-    match svc {
-      "cluster.WorkspaceNodes" => Ok(self.workspace_nodes.clone()),
-      _ => Err(super::Error::MissingClient(
-        ERROR_MISSING_SERVICE.to_string(),
-      )),
-    }
-  }
-
-  pub async fn get_clusters_client(&self) -> Result<ShardedClient<ClusterSvcClient>, super::Error> {
+#[async_trait::async_trait]
+impl ServiceRegistry<ClusterSvcClient> for ServiceLocator {
+  async fn get(&self) -> anyhow::Result<ShardedClient<ClusterSvcClient>> {
     Ok(self.clusters.clone())
   }
+}
 
-  pub async fn get_operations_client(
-    &self,
-  ) -> Result<ShardedClient<OperationsSvcClient>, super::Error> {
-    Ok(self.operations.clone())
+#[async_trait::async_trait]
+impl ServiceRegistry<ClusterWorkspacesClient> for ServiceLocator {
+  async fn get(&self) -> anyhow::Result<ShardedClient<ClusterWorkspacesClient>> {
+    Ok(self.cluster_workspaces.clone())
   }
+}
 
-  pub async fn get_workspace_nodes_client(
-    &self,
-  ) -> Result<ClusterWorkspacesShardedClient, super::Error> {
-    Ok(self.workspace_nodes.clone())
+#[async_trait::async_trait]
+impl ServiceRegistry<OperationsSvcClient> for ServiceLocator {
+  async fn get(&self) -> anyhow::Result<ShardedClient<OperationsSvcClient>> {
+    Ok(self.operations.clone())
   }
 }

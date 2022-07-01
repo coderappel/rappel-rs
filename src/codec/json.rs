@@ -59,9 +59,9 @@ impl<T: Serialize, U: DeserializeOwned> JsonCodec<T, U> {
 }
 
 impl<T: Serialize, U: DeserializeOwned> Default for JsonCodec<T, U> {
-    fn default() -> Self {
-        Self(PhantomData)
-    }
+  fn default() -> Self {
+    Self(PhantomData)
+  }
 }
 
 impl<T, U> Codec for JsonCodec<T, U>
