@@ -86,7 +86,7 @@ impl Service {
     })
   }
 
-  pub async fn service_locator(&self) -> &ServiceLocator {
+  pub fn service_locator(&self) -> &ServiceLocator {
     &self.service_locator
   }
 
