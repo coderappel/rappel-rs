@@ -6,7 +6,7 @@ fn main() {
   tonic_build::configure()
     .build_server(true)
     .compile_well_known_types(true)
-    .type_attribute(".", "#[derive(serde::Serialize)]")
+    .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
     .file_descriptor_set_path(&descriptor_path)
     .compile(
       &[
