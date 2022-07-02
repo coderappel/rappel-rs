@@ -24,7 +24,7 @@ pub struct LogConfig {}
 #[derive(Clone, Debug, Deserialize)]
 pub struct ServiceConfig {
   pub server: ServerConfig,
-  pub log: LogConfig,
+  pub logger: LogConfig,
 }
 
 pub struct Service {
@@ -42,7 +42,7 @@ impl Service {
     let service_locator = ServiceLocator::try_new(Self::init_service_locator(&opts)?)?;
     let service_config: ServiceConfig = config.clone().try_deserialize()?;
 
-    let _ = Self::init_logging(&opts, &service_config.log)?;
+    let _ = Self::init_logging(&opts, &service_config.logger)?;
 
     let svc = Service {
       config,
