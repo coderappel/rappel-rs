@@ -18,7 +18,7 @@ service Workspaces {
       body: "*"
     };
   }
-  
+
   rpc Delete(DeleteWorkspaceRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       delete: "/api/v1/workspaces/{workspace_id}"
@@ -68,26 +68,26 @@ enum WorkspaceStatus {
   WORKSPACE_STATUS_TERMINATED = 5;
 }
 
-message Workspace {
-  int64 workspace_id = 1;
+message Execution {
+  int64 cluster_id = 1;
 
-  int64 owner = 2;
+  string server_instance_id = 2;
+
+  string pending_operation_id = 3;
+}
+
+message Workspace {
+  int64 workspace_id = 2;
 
   rappel.workspace.Template template = 3;
+
+  int64 owner_id = 4;
 
   string display_name = 5;
 
   WorkspaceStatus status = 7;
 
-  int64 billing_account_id = 9;
-
-  map<string,string> labels = 10;
-
-  map<string, string> resources = 12;
-
-  map<string, string> execution_info = 13;
-
-  map<string, string> pending_operation = 14;
+  Execution execution = 10;
 
   rappel.process.ExitStatus last_exit_status = 15;
 
