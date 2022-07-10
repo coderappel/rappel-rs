@@ -57,6 +57,20 @@ service Workspaces {
       body: "*"
     };
   }
+
+  rpc Restart(RestartWorkspaceRequest) returns (longrunning.Operation) {
+    option (google.api.http) = {
+      post: "/api/v1/workspaces/{workspace_id}/method:restart",
+      body: "*"
+    };
+  }
+
+  rpc Replace(ReplaceWorkspaceRequest) returns (longrunning.Operation) {
+    option (google.api.http) = {
+      post: "/api/v1/workspaces/{workspace_id}/method:replace",
+      body: "*"
+    };
+  }
 }
 
 enum WorkspaceStatus {
@@ -154,5 +168,13 @@ message StartWorkspaceRequest {
 }
 
 message StopWorkspaceRequest {
+  int64 workspace_id = 1;
+}
+
+message RestartWorkspaceRequest {
+  int64 workspace_id = 1;
+}
+
+message ReplaceWorkspaceRequest {
   int64 workspace_id = 1;
 }
