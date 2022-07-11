@@ -44,6 +44,8 @@ tracing-attributes = "0.1.22"
 tracing-futures = "0.2.5"
 tracing-log = "0.1.3"
 tracing-subscriber = { version = "0.3.14", features = ["json"] }
+tracing-opentelemetry = "0.17.4"
+opentelemetry = { version = "0.17.0", features = ["rt-tokio"] }
 
 [build-dependencies]
 tonic-build = "0.7.2"

@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package rappel.server;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "rappel/process/status.proto";
+
+service ProcessManager {
+  rpc RunCommand(Command) returns (CommandOutput);
+
+  rpc StartProcess(Command) returns (Process);
+
+  rpc Write(WriteRequest) returns (WriteResponse);
+
+  rpc Read(ReadRequest) returns (ReadResponse);
+
+  rpc Listen(ReadRequest) returns (stream ReadResponse);
+
+  rpc ListProcesses(ListProcessRequest) returns (ListProcessResponse);
+
+  rpc UpdateProcess(UpdateProcessRequest) returns (Process);
+
+  rpc KillProcess(KillProcessRequest) returns (Process);
+}
+
+message PtyOptions {
+  uint32 rows = 1;
+
+  uint32 cols = 2;
+}
+
+enum Stdio {
+  STDIO_INHERIT = 0;
+  STDIO_NULL = 1;
+  STDIO_PIPED = 2;
+}
+
+message Command {
+  string cmd = 1;
+
+  repeated string args = 2;
+
+  string cwd = 5;
+
+  map<string, string> env = 6;
+
+  Stdio stdin = 7;
+
+  Stdio stdout = 8;
+
+  Stdio stderr = 9;
+
+  uint32 uid = 10;
+
+  uint32 gid = 11;
+
+  uint32 pgid = 12;
+}
+
+message Process {
+  uint32 pid = 1;
+
+  uint32 ppid = 2;
+
+  Command command = 5;
+
+  PtyOptions pty_options = 6;
+
+  bool is_running = 8;
+
+  rappel.process.ExitStatus exit_status = 9;
+
+  google.protobuf.Timestamp start_ts = 10;
+
+  google.protobuf.Timestamp end_ts = 11;
+}
+
+message CommandOutput {
+  Process process = 1;
+
+  bytes stdout = 2;
+
+  bytes stderr = 3;
+}
+
+message WriteRequest {
+  uint32 pid = 1;
+
+  bytes data = 2;
+}
+
+message WriteResponse {}
+
+enum IoChannel {
+  Stdin = 0;
+  Stdout = 1;
+  Stderr = 2;
+}
+
+message ReadRequest {
+  uint32 pid = 1;
+
+  IoChannel channel = 2;
+}
+
+message ReadResponse {
+  bytes data = 1;
+
+  bool is_closed = 2;
+}
+
+message ListProcessRequest {}
+
+message ListProcessResponse {
+  repeated Process process = 1;
+}
+
+message UpdateProcessRequest {
+  Process process = 1;
+}
+
+message KillProcessRequest {
+  uint32 pid = 1;
+
+  uint64 flag = 2;
+}

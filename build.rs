@@ -17,7 +17,7 @@ fn main() {
         "proto/rappel/account/organization.proto",
         "proto/rappel/workspace/ides.proto",
         "proto/rappel/workspace/workspaces.proto",
-        "proto/rappel/process/processes.proto",
+        "proto/rappel/process/process.proto",
         "proto/google/protobuf/any.proto",
       ],
       &["proto"],
@@ -30,6 +30,7 @@ fn main() {
   println!("cargo:rerun-if-changed=proto/google/protobuf/any.proto");
   println!("cargo:rerun-if-changed=proto/rappel/cluster/workspaces.proto");
   println!("cargo:rerun-if-changed=proto/rappel/workspace/ides.proto");
+  println!("cargo:rerun-if-changed=proto/rappel/process/process.proto");
   println!("cargo:rerun-if-changed=proto/rappel/workspace/workspaces.proto");
 
   std::fs::copy(&descriptor_path, "./descriptors.pb").unwrap();
