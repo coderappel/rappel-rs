@@ -8,9 +8,9 @@ import "google/protobuf/timestamp.proto";
 import "rappel/process/status.proto";
 
 service ProcessManager {
-  rpc RunCommand(Command) returns (CommandOutput);
+  rpc Run(Command) returns (CommandOutput);
 
-  rpc StartProcess(Command) returns (Process);
+  rpc Start(Command) returns (Process);
 
   rpc Write(WriteRequest) returns (WriteResponse);
 
@@ -18,11 +18,11 @@ service ProcessManager {
 
   rpc Listen(ReadRequest) returns (stream ReadResponse);
 
-  rpc ListProcesses(ListProcessRequest) returns (ListProcessResponse);
+  rpc List(ListProcessRequest) returns (ListProcessResponse);
 
-  rpc UpdateProcess(UpdateProcessRequest) returns (Process);
+  rpc Update(UpdateProcessRequest) returns (Process);
 
-  rpc KillProcess(KillProcessRequest) returns (Process);
+  rpc Kill(KillProcessRequest) returns (Process);
 }
 
 message PtyOptions {
