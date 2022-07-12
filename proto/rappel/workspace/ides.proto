@@ -2,13 +2,14 @@ syntax = "proto3";
 
 package rappel.workspace;
 
+import "rappel/process/process.proto";
 import "rappel/process/status.proto";
 import "longrunning/operations.proto";
 import "google/protobuf/timestamp.proto";
 import "google/api/annotations.proto";
 
-service Ides {
-  rpc Create(CreateIdeRequest) returns (longrunning.Operation) {
+service IdeManager {
+  rpc Create(CreateIdeRequest) returns (Ide) {
     option (google.api.http) = {
       post: "/api/v1/workspaces/{workspace_id}/ides",
       body: "*"
@@ -26,32 +27,59 @@ service Ides {
       get: "/api/v1/workspaces/{workspace_id}/ides/{ide_id}"
     };
   }
-  
-  rpc Delete(DeleteIdeRequest) returns (longrunning.Operation) {
+
+  rpc Delete(DeleteIdeRequest) returns (Ide) {
     option (google.api.http) = {
       delete: "/api/v1/workspaces/{workspace_id}/ides/{ide_id}"
+    };
+  }
+
+  rpc Start(StartIdeRequest) returns (Ide) {
+    option (google.api.http) = {
+      post: "/api/v1/workspaces/{workspace_id}/ides/{ide_id}/method:start",
+      body: "*"
+    };
+  }
+
+  rpc Stop(StopIdeRequest) returns (Ide) {
+    option (google.api.http) = {
+      post: "/api/v1/workspaces/{workspace_id}/ides/{ide_id}/method:stop",
+      body: "*"
+    };
+  }
+
+  rpc Restart(RestartIdeRequest) returns (Ide) {
+    option (google.api.http) = {
+      post: "/api/v1/workspaces/{workspace_id}/ides/{ide_id}/method:restart",
+      body: "*"
     };
   }
 }
 
 message Ide {
-  int64 ide_id = 1;
+  int64 id = 1;
+
+  int64 workspace_id = 2;
 
   string display_name = 5;
 
-  rappel.process.Status status = 7;
+  string name = 8;
 
-  string command = 8;
+  string version = 9;
 
-  repeated string args = 9;
+  string address = 10;
 
-  string target_address = 10;
+  rappel.process.Executor executor = 20;
 
-  string version = 11;
+  rappel.process.Process process = 21;
 
-  rappel.process.ExitStatus exit_status = 15;
+  google.protobuf.Timestamp creation_ts = 30;
 
-  google.protobuf.Timestamp creation_ts = 20;
+  int64 creation_user_id = 31;
+
+  google.protobuf.Timestamp last_update_ts = 32;
+
+  int64 last_update_user_id = 33;
 }
 
 message CreateIdeRequest {
@@ -75,6 +103,24 @@ message GetIdeRequest {
 }
 
 message DeleteIdeRequest {
+  int64 workspace_id = 1;
+
+  int64 ide_id = 2;
+}
+
+message StopIdeRequest {
+  int64 workspace_id = 1;
+
+  int64 ide_id = 2;
+}
+
+message StartIdeRequest {
+  int64 workspace_id = 1;
+
+  int64 ide_id = 2;
+}
+
+message RestartIdeRequest {
   int64 workspace_id = 1;
 
   int64 ide_id = 2;

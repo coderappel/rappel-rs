@@ -41,9 +41,7 @@ pub mod rappel {
     tonic::include_proto!("rappel.system");
   }
 
-  pub mod server {
-    tonic::include_proto!("rappel.server");
-  }
+  pub mod server {}
 
   pub mod workspace {
     tonic::include_proto!("rappel.workspace");

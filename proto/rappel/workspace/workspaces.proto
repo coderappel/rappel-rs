@@ -3,13 +3,15 @@ syntax = "proto3";
 package rappel.workspace;
 
 
+import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
+
 import "longrunning/operations.proto";
-import "rappel/workspace/templates.proto";
+import "rappel/process/process.proto";
 import "rappel/process/status.proto";
-import "google/api/annotations.proto";
+import "rappel/workspace/templates.proto";
 
 service Workspaces {
   rpc Create(CreateWorkspaceRequest) returns (Workspace) {
@@ -82,14 +84,6 @@ enum WorkspaceStatus {
   WORKSPACE_STATUS_TERMINATED = 5;
 }
 
-message Execution {
-  int64 cluster_id = 1;
-
-  string server_instance_id = 2;
-
-  string pending_operation_id = 3;
-}
-
 message Workspace {
   int64 workspace_id = 2;
 
@@ -101,17 +95,19 @@ message Workspace {
 
   WorkspaceStatus status = 7;
 
-  Execution execution = 10;
+  rappel.process.Executor executor = 20;
 
-  rappel.process.ExitStatus last_exit_status = 15;
+  rappel.process.Process process = 21;
 
-  google.protobuf.Timestamp creation_ts = 20;
+  repeated string address = 25;
 
-  int64 creation_user_id = 21;
+  google.protobuf.Timestamp creation_ts = 30;
 
-  google.protobuf.Timestamp last_update_ts = 22;
+  int64 creation_user_id = 31;
 
-  int64 last_update_user_id = 23;
+  google.protobuf.Timestamp last_update_ts = 32;
+
+  int64 last_update_user_id = 33;
 }
 
 message CreateWorkspaceRequest {
@@ -122,9 +118,6 @@ message CreateWorkspaceRequest {
   }
 
   string display_name = 3;
-
-  // the field is currently unused
-  string owner = 4;
 
   map<string,string> labels = 5;
 }

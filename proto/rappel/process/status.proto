@@ -22,3 +22,26 @@ message ExitStatus {
 
   google.protobuf.Timestamp last_update_ts = 5;
 }
+
+enum NodeType {
+  NODE_TYPE_UNKNOWN = 0;
+  NODE_TYPE_KUBERNETES_POD = 1;
+  NODE_TYPE_VM = 3;
+  NODE_TYPE_CONTAINER = 4;
+}
+
+message Executor {
+  int64 cluster_id = 1;
+
+  string node_id = 2;
+
+  string node_name = 3;
+
+  NodeType node_type = 4;
+
+  string operating_system = 5;
+
+  string operating_system_version = 6;
+
+  string ip = 20;
+}
