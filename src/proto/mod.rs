@@ -1,6 +1,7 @@
 pub use self::rappel::account;
 pub use self::rappel::cluster;
 pub use self::rappel::process;
+pub use self::rappel::rpc;
 pub use self::rappel::system;
 pub use self::rappel::workspace;
 
@@ -44,6 +45,7 @@ pub mod rappel {
   pub mod system {
     tonic::include_proto!("rappel.system");
   }
+
   pub mod workspace {
     tonic::include_proto!("rappel.workspace");
   }
