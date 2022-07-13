@@ -25,6 +25,10 @@ pub mod health {
 }
 
 pub mod rappel {
+  pub mod account {
+    tonic::include_proto!("rappel.account");
+  }
+
   pub mod cluster {
     tonic::include_proto!("rappel.cluster");
   }
@@ -33,16 +37,13 @@ pub mod rappel {
     tonic::include_proto!("rappel.process");
   }
 
-  pub mod account {
-    tonic::include_proto!("rappel.account");
+  pub mod rpc {
+    tonic::include_proto!("rappel.rpc");
   }
 
   pub mod system {
     tonic::include_proto!("rappel.system");
   }
-
-  pub mod server {}
-
   pub mod workspace {
     tonic::include_proto!("rappel.workspace");
   }

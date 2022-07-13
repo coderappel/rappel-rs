@@ -2,11 +2,10 @@ syntax = "proto3";
 
 package rappel.workspace;
 
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
 import "rappel/process/process.proto";
 import "rappel/process/status.proto";
-import "longrunning/operations.proto";
-import "google/protobuf/timestamp.proto";
-import "google/api/annotations.proto";
 
 service IdeManager {
   rpc Create(CreateIdeRequest) returns (Ide) {

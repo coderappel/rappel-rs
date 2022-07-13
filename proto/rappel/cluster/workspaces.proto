@@ -3,7 +3,6 @@ syntax = "proto3";
 package rappel.cluster;
 
 import "google/protobuf/timestamp.proto";
-import "longrunning/operations.proto";
 import "rappel/workspace/workspaces.proto";
 
 message Port {
