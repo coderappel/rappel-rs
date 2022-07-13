@@ -19,6 +19,7 @@ fn main() {
         "proto/rappel/workspace/workspaces.proto",
         "proto/rappel/process/process.proto",
         "proto/rappel/rpc/packet.proto",
+        "proto/google/rpc/code.proto",
       ],
       &["proto"],
     )
